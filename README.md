@@ -1,12 +1,47 @@
-# React + Vite
+# SkillBridge – The Ultimate Mentor Hub
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+SkillBridge is a modern, responsive, and intuitive web platform that bridges the gap between aspiring mentees and experienced mentors. Designed to foster meaningful mentorship connections, SkillBridge offers role-based dashboards, real-time communication, session scheduling, and a seamless booking system.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 🔐 Role-based Authentication (Mentor & Mentee)  
+- 🧑‍🏫 Mentor Directory with Filters and Search  
+- 📅 Session Booking System with Availability Management  
+- 💬 Real-time Chat between Mentors and Mentees  
+- 🧾 Personalized Dashboards for Each Role  
+- 📝 Profile Management and Resume Sharing  
+- 🌐 Responsive Design for All Devices  
+- 📢 Notification System (In-app)  
+- ⭐ Feedback & Rating System  
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- **Frontend:** React.js, Tailwind CSS  
+- **Routing:** React Router DOM  
+- **State Management:** Context API / Custom Hooks  
+- **Chat (Coming Soon):** Socket.io / Firebase  
+- **Backend (Planned):** Node.js, Express.js, MongoDB  
+- **Payment Integration (Planned):** Razorpay / Stripe 
+
+## Installation
+
+1. Clone the repository  
+```bash
+git clone https://github.com/your-username/skillbridge.git
+cd skillbridge
+```
+2. Install dependencies
+```
+npm install
+```
+3. Start the development server
+```
+npm run dev
+```
+
+
+## Connect with Me
+
+**GitHub:** @ritiksingh-01
+
+**LinkedIn:** Ritik Singh
