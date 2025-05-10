@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Camera, 
   Briefcase, 
@@ -12,11 +12,19 @@ import {
   Linkedin,
   Youtube,
   Facebook,
-  Instagram
+  Instagram,
+  Upload,
+  User
 } from 'lucide-react';
 import Header from '../Components/Header';
+import { useNavigate } from 'react-router-dom';
 
 const BecomeMentorPage = () => {
+  const fileInputRef = useRef(null);
+  const [resumeFile, setResumeFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const navigate = useNavigate();
+  
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -71,20 +79,27 @@ const BecomeMentorPage = () => {
     }
   };
 
+  const handleResumeUpload = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setResumeFile(file);
+      setIsUploading(true);
+      setTimeout(() => {
+        setIsUploading(false);
+      }, 1500);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Process form submission
     console.log('Form submitted:', formData);
-    // Continue with next steps (e.g., API call)
   };
 
   const handleBack = () => {
-    // Handle back navigation
-    console.log('Going back');
+    navigate('/')
   };
 
   const handleGuidelines = () => {
-    // Show guidelines for mentors
     console.log('Showing guidelines');
   };
 
@@ -108,7 +123,7 @@ const BecomeMentorPage = () => {
           <div className="flex items-center mb-8">
             <button 
               onClick={handleBack}
-              className="mr-4 p-2 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors"
+              className="mr-4 p-2 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors cursor-pointer"
             >
               <ChevronLeft size={20} />
             </button>
@@ -165,6 +180,47 @@ const BecomeMentorPage = () => {
 
             {/* Form Fields */}
             <form onSubmit={handleSubmit} className="px-8 pt-24 pb-8 mt-4">
+              {/* Resume Upload Section */}
+              <div className="mb-8 p-4 border border-dashed border-blue-300 bg-blue-50 rounded-lg">
+                <div className="flex flex-col md:flex-row items-center gap-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
+                      <Upload size={24} />
+                    </div>
+                  </div>
+                  <div className="flex-grow text-center md:text-left">
+                    <h3 className="text-lg font-medium text-gray-800 mb-1">Upload Your Resume</h3>
+                    <p className="text-sm text-gray-600 mb-3">Attach your resume to your mentor profile</p>
+                    <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current.click()}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors cursor-pointer"
+                        disabled={isUploading}
+                      >
+                        {isUploading ? "Uploading..." : "Upload Resume"}
+                        <Upload size={16} />
+                      </button>
+                      <input 
+                        type="file" 
+                        ref={fileInputRef}
+                        accept=".pdf,.doc,.docx" 
+                        className="hidden" 
+                        onChange={handleResumeUpload}
+                      />
+                      {resumeFile && (
+                        <span className="text-sm text-gray-600 flex items-center">
+                          {resumeFile.name}
+                          {isUploading && (
+                            <span className="ml-2 inline-block w-4 h-4 border-2 border-t-blue-600 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></span>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
                 {/* First Name */}
                 <FormField
@@ -230,68 +286,84 @@ const BecomeMentorPage = () => {
                 <FormField
                   label="Current Organisation/Institute"
                   required={true}
-                  icon={<Building size={18} className="text-gray-400" />}
                 >
-                  <input
-                    type="text"
-                    name="organization"
-                    value={formData.organization}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter your current organization"
-                  />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Building size={18} className="text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      name="organization"
+                      value={formData.organization}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter your current organization"
+                    />
+                  </div>
                 </FormField>
 
                 {/* Industry */}
                 <FormField
                   label="Industry"
                   required={true}
-                  icon={<BookOpen size={18} className="text-gray-400" />}
                 >
-                  <input
-                    type="text"
-                    name="industry"
-                    value={formData.industry}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter your industry"
-                  />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <BookOpen size={18} className="text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      name="industry"
+                      value={formData.industry}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter your industry"
+                    />
+                  </div>
                 </FormField>
 
                 {/* Current Role */}
                 <FormField
                   label="Current Role"
                   required={true}
-                  icon={<Briefcase size={18} className="text-gray-400" />}
                 >
-                  <input
-                    type="text"
-                    name="currentRole"
-                    value={formData.currentRole}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter your current role"
-                  />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Briefcase size={18} className="text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      name="currentRole"
+                      value={formData.currentRole}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter your current role"
+                    />
+                  </div>
                 </FormField>
 
                 {/* Work Experience */}
                 <FormField
                   label="Work Experience"
                   required={true}
-                  icon={<Award size={18} className="text-gray-400" />}
                 >
-                  <input
-                    type="text"
-                    name="workExperience"
-                    value={formData.workExperience}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Years of experience"
-                  />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Award size={18} className="text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      name="workExperience"
+                      value={formData.workExperience}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Years of experience"
+                    />
+                  </div>
                 </FormField>
 
                 {/* Headline */}
@@ -317,16 +389,20 @@ const BecomeMentorPage = () => {
                   <FormField
                     label="Bio/About you"
                     required={true}
-                    icon={<FileText size={18} className="text-gray-400 mt-2" />}
                   >
-                    <textarea
-                      name="bio"
-                      value={formData.bio}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full h-32 pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Tell us about yourself, your expertise, and why you want to mentor others"
-                    ></textarea>
+                    <div className="relative">
+                      <div className="absolute top-3 left-3 pointer-events-none">
+                        <FileText size={18} className="text-gray-400" />
+                      </div>
+                      <textarea
+                        name="bio"
+                        value={formData.bio}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full h-32 pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Tell us about yourself, your expertise, and why you want to mentor others"
+                      ></textarea>
+                    </div>
                   </FormField>
                 </div>
 
@@ -447,41 +523,14 @@ const BecomeMentorPage = () => {
   );
 };
 
-// Reusable Form Field Component
-const FormField = ({ label, required = false, children, icon = null }) => {
+const FormField = ({ label, required = false, children }) => {
   return (
-    <div className="relative">
+    <div>
       <label className="block text-base font-medium text-gray-700 mb-2">
         {label}{required && <span className="text-red-500 ml-1">*</span>}
       </label>
-      {icon && (
-        <div className="absolute left-3 top-[41px] transform -translate-y-1/2 pointer-events-none">
-          {icon}
-        </div>
-      )}
       {children}
     </div>
-  );
-};
-
-// Import the missing User icon for gender options
-const User = ({ className }) => {
-  return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      width="24" 
-      height="24" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      className={className}
-    >
-      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-      <circle cx="12" cy="7" r="4"></circle>
-    </svg>
   );
 };
 
