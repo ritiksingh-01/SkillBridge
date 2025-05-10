@@ -2,7 +2,8 @@ import React from "react";
 import Footer from "../Components/Footer";
 import { Star, CheckCircle, ArrowRight, Calendar, Briefcase, Users, Search, BookOpen, Award, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
+import image1 from '../assets/image1.jpeg'; 
+import image2 from '../assets/image2.jpeg'; 
 const HomePage = () => {
 
   const navigate = useNavigate();
@@ -145,7 +146,7 @@ const HomePage = () => {
                     {/* Mentor cards */}
                     <div className="w-44 h-64 bg-white rounded-xl overflow-hidden shadow-lg border border-gray-100 transform -rotate-6 hover:rotate-0 transition-transform hover:scale-105">
                       <div className="h-1 bg-blue-600"></div>
-                      <img src="/api/placeholder/176/176" alt="Mentor" className="w-full h-32 object-cover" />
+                      <img src={image1} alt="Mentor" className="w-full h-32 object-cover" />
                       <div className="p-3">
                         <div className="flex items-center justify-between mb-1">
                           <p className="font-semibold text-gray-800">Sarah Chen</p>
@@ -168,7 +169,7 @@ const HomePage = () => {
                     
                     <div className="w-44 h-64 bg-white rounded-xl overflow-hidden shadow-lg border border-gray-100 transform rotate-6 hover:rotate-0 transition-transform hover:scale-105 mt-12">
                       <div className="h-1 bg-indigo-600"></div>
-                      <img src="/api/placeholder/176/176" alt="Mentor" className="w-full h-32 object-cover" />
+                      <img src={image2} alt="Mentor" className="w-full h-32 object-cover" />
                       <div className="p-3">
                         <div className="flex items-center justify-between mb-1">
                           <p className="font-semibold text-gray-800">Alex Rivera</p>
