@@ -1,0 +1,570 @@
+import { useState, useRef, useEffect } from "react"
+import { Eye, EyeOff, Mail, Lock, User, BookOpen, Users, ArrowLeft, ChevronDown } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+
+const SignUpPage = () => {
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
+  const [gender, setGender] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [countryCode, setCountryCode] = useState("+91")
+  const [showCountryCodes, setShowCountryCodes] = useState(false)
+  const [agreeToTerms, setAgreeToTerms] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [userRole, setUserRole] = useState("mentee")
+  const countryCodes = ["+91", "+1", "+44", "+61", "+49", "+33", "+81", "+86"]
+  const countryCodeRef = useRef(null)
+  const navigate = useNavigate()
+
+  // Click outside to close dropdown
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (countryCodeRef.current && !countryCodeRef.current.contains(event.target)) {
+        setShowCountryCodes(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
+
+  function handleBack() {
+    navigate("/")
+  }
+  function handleLoginPage(){
+    navigate('/login')
+  }
+
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return re.test(email)
+  }
+
+  const handleSubmit = () => {
+    let isValid = true
+
+    if (!firstName) {
+      isValid = false
+    }
+
+    if (!email || !validateEmail(email)) {
+      isValid = false
+    }
+
+    if (!password || password.length < 6) {
+      isValid = false
+    }
+
+    if (password !== confirmPassword) {
+      isValid = false
+    }
+
+    if (!agreeToTerms) {
+      isValid = false
+    }
+
+    if (isValid) {
+      setIsLoading(true)
+      // Simulate API call
+      setTimeout(() => {
+        setIsLoading(false)
+        console.log("Signup form submitted", {
+          firstName,
+          lastName,
+          email,
+          phone: phone ? `${countryCode}${phone}` : "",
+          gender,
+          password,
+          userRole,
+        })
+        // Navigate to dashboard or appropriate page
+      }, 1500)
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen bg-white overflow-hidden">
+      {/* Left section with illustration */}
+      <div className="hidden lg:block lg:w-1/2 bg-gradient-to-br from-blue-600 to-blue-800 relative">
+        <div className="absolute top-0 left-0 w-full h-full bg-blue-900 opacity-10">
+          {/* Abstract pattern overlay */}
+          <svg className="absolute inset-0" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <defs>
+              <pattern id="grid" width="8" height="8" patternUnits="userSpaceOnUse">
+                <path d="M 8 0 L 0 0 0 8" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+          </svg>
+        </div>
+
+        {/* Logo */}
+        <div className="absolute top-10 left-10 z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-blue-800 font-bold text-xl">SB</span>
+            </div>
+            <div className="text-white text-xl font-bold">
+              Skill<span className="font-light">Bridge</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Center content */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 w-full max-w-lg px-6 text-center">
+          <h1 className="text-4xl font-bold text-white mb-4">Join SkillBridge Today</h1>
+          <p className="text-white/90 text-lg mb-8">
+            Create your profile and start your journey towards professional growth.
+          </p>
+
+          {/* Features grid */}
+          <div className="grid grid-cols-2 gap-4 mb-10">
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 transition-all hover:bg-white/20 hover:scale-105 duration-300">
+              <div className="h-12 w-12 mx-auto flex items-center justify-center bg-white/20 rounded-xl mb-3">
+                <BookOpen size={24} className="text-white" />
+              </div>
+              <h3 className="font-semibold text-white text-lg">Virtual Learning</h3>
+              <p className="text-white/80 text-sm mt-1">Learn from experts anywhere</p>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 transition-all hover:bg-white/20 hover:scale-105 duration-300">
+              <div className="h-12 w-12 mx-auto flex items-center justify-center bg-white/20 rounded-xl mb-3">
+                <Users size={24} className="text-white" />
+              </div>
+              <h3 className="font-semibold text-white text-lg">Community Access</h3>
+              <p className="text-white/80 text-sm mt-1">Connect with a global network</p>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 transition-all hover:bg-white/20 hover:scale-105 duration-300">
+              <div className="h-12 w-12 mx-auto flex items-center justify-center bg-white/20 rounded-xl mb-3">
+                <User size={24} className="text-white" />
+              </div>
+              <h3 className="font-semibold text-white text-lg">Career Mentorship</h3>
+              <p className="text-white/80 text-sm mt-1">1-on-1 guidance & support</p>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 transition-all hover:bg-white/20 hover:scale-105 duration-300">
+              <div className="h-12 w-12 mx-auto flex items-center justify-center bg-white/20 rounded-xl mb-3">
+                <div className="text-white font-bold text-xl">JM</div>
+              </div>
+              <h3 className="font-semibold text-white text-lg">Job Matching</h3>
+              <p className="text-white/80 text-sm mt-1">Find your perfect opportunity</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom testimonial */}
+        <div className="absolute bottom-10 left-10 right-10 bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+              <User size={24} className="text-white" />
+            </div>
+            <div>
+              <p className="text-white/90 italic mb-3">
+                "SkillBridge transformed my career path with quality mentorship that helped me land my dream job in just
+                3 months."
+              </p>
+              <p className="text-white font-medium">Alex Johnson</p>
+              <p className="text-white/70 text-sm">Software Engineer at Google</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right section with form - FIXED OVERFLOW ISSUES */}
+      <div className="w-full lg:w-1/2 flex flex-col h-screen">
+        {/* Mobile header */}
+        <div className="flex items-center p-4 lg:hidden">
+          <button onClick={handleBack} className="mr-4">
+            <ArrowLeft size={20} className="text-gray-600" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-md">
+              <span className="text-white font-bold text-sm">SB</span>
+            </div>
+            <div className="text-blue-600 text-lg font-bold">
+              Skill<span className="font-light">Bridge</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Form container with proper scrolling */}
+        <div className="flex-1 overflow-y-auto py-4 px-4 sm:px-6 lg:px-8">
+          <div className="w-full max-w-md mx-auto">
+            <button onClick={handleBack} className="hidden lg:flex items-center text-gray-500 hover:text-gray-700 mb-6 cursor-pointer">
+              <ArrowLeft size={16} className="mr-2" />
+              <span>Back to home</span>
+            </button>
+
+            <h1 className="text-3xl font-bold text-gray-900 mb-3">Create an account</h1>
+            <p className="text-gray-500 mb-6">Please enter your details to sign up</p>
+
+            {/* Role selection */}
+            <div className="bg-gray-100 p-1 rounded-lg flex mb-6">
+              <button
+                className={`flex-1 py-3 text-sm font-medium rounded-md transition-all cursor-pointer ${
+                  userRole === "mentee" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                }`}
+                onClick={() => setUserRole("mentee")}
+              >
+                As Mentee
+              </button>
+              <button
+                className={`flex-1 py-3 text-sm font-medium rounded-md transition-all cursor-pointer ${
+                  userRole === "mentor" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                }`}
+                onClick={() => setUserRole("mentor")}
+              >
+                As Mentor
+              </button>
+            </div>
+
+            {/* Social logins */}
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              {/* Google */}
+              <button className="flex items-center justify-center border border-gray-300 rounded-lg py-2.5 px-4 hover:bg-gray-50 transition-colors cursor-pointer">
+                <svg width="20" height="20" viewBox="0 0 20 20">
+                  <path
+                    d="M19.999 10.2217C19.999 9.61842 19.9448 9.01788 19.8399 8.43089H10.2002V12.2648H15.7128C15.5098 13.5291 14.7762 14.6282 13.6863 15.3349V17.9535H16.9159C18.82 16.1812 19.999 13.4299 19.999 10.2217Z"
+                    fill="#4285F4"
+                  />
+                  <path
+                    d="M10.2002 20.0003C12.9592 20.0003 15.2721 19.1151 16.9159 17.9535L13.6863 15.3349C12.7605 15.9501 11.5731 16.3262 10.2002 16.3262C7.5427 16.3262 5.2889 14.5386 4.54698 12.1026H1.20459V14.8048C2.86299 17.8903 6.21601 20.0003 10.2002 20.0003Z"
+                    fill="#34A853"
+                  />
+                  <path
+                    d="M4.54698 12.1026C4.36372 11.4899 4.26636 10.8391 4.26636 10.1741C4.26636 9.50922 4.36372 8.85845 4.54698 8.24574V5.54348H1.20459C0.437457 6.93049 0 8.51532 0 10.1741C0 11.833 0.437457 13.4178 1.20459 14.8048L4.54698 12.1026Z"
+                    fill="#FBBC05"
+                  />
+                  <path
+                    d="M10.2002 4.02275C11.699 4.02275 13.0305 4.5298 14.0812 5.53154L16.9646 2.64795C15.2715 1.0079 12.9592 0 10.2002 0C6.21601 0 2.86299 2.11004 1.20459 5.19552L4.54698 7.89779C5.2889 5.46175 7.5427 3.67413 10.2002 3.67413V4.02275Z"
+                    fill="#EA4335"
+                  />
+                </svg>
+              </button>
+
+              {/* LinkedIn */}
+              <button className="flex items-center justify-center border border-gray-300 rounded-lg py-2.5 px-4 hover:bg-gray-50 transition-colors cursor-pointer">
+                <svg width="18" height="18" viewBox="0 0 18 18">
+                  <path
+                    d="M16 0C17.1 0 18 0.9 18 2V16C18 17.1 17.1 18 16 18H2C0.9 18 0 17.1 0 16V2C0 0.9 0.9 0 2 0H16ZM15.5 15.5V10.2C15.5 7.86667 14.9667 6.06667 12.1 6.06667C10.7333 6.06667 9.8 6.86667 9.43333 7.63333H9.4V6.26667H6.73333V15.5H9.5V10.7C9.5 9.5 9.73333 8.33333 11.2 8.33333C12.6667 8.33333 12.6667 9.7 12.6667 10.7667V15.5H15.5ZM3.76667 15.5H6.53333V6.26667H3.76667V15.5ZM5.16667 2C4.16667 2 3.33333 2.83333 3.33333 3.83333C3.33333 4.83333 4.16667 5.66667 5.16667 5.66667C6.16667 5.66667 7 4.83333 7 3.83333C7 2.83333 6.16667 2 5.16667 2Z"
+                    fill="#0A66C2"
+                  />
+                </svg>
+              </button>
+
+              {/* GitHub */}
+              <button className="flex items-center justify-center border border-gray-300 rounded-lg py-2.5 px-4 hover:bg-gray-50 transition-colors cursor-pointer">
+                <svg width="20" height="20" viewBox="0 0 20 20">
+                  <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M10 0C4.475 0 0 4.59 0 10.254C0 14.782 2.865 18.624 6.84 19.98C7.34 20.07 7.525 19.763 7.525 19.495C7.525 19.253 7.516 18.546 7.516 17.684C4.73 18.276 4.15 16.457 4.15 16.457C3.695 15.261 3.035 14.954 3.035 14.954C2.125 14.321 3.105 14.321 3.105 14.321C4.125 14.387 4.655 15.37 4.655 15.37C5.55 16.937 7.005 16.504 7.56 16.236C7.65 15.572 7.91 15.112 8.195 14.854C5.97 14.597 3.635 13.717 3.635 9.766C3.635 8.629 4.015 7.712 4.67 6.993C4.565 6.735 4.215 5.677 4.77 4.266C4.77 4.266 5.615 3.988 7.52 5.316C8.32 5.091 9.17 4.976 10.02 4.976C10.87 4.976 11.72 5.091 12.52 5.316C14.42 3.988 15.265 4.266 15.265 4.266C15.82 5.677 15.47 6.735 15.365 6.993C16.02 7.712 16.4 8.629 16.4 9.766C16.4 13.717 14.065 14.587 11.84 14.844C12.2 15.172 12.51 15.798 12.51 16.768C12.51 18.142 12.5 19.161 12.5 19.495C12.5 19.763 12.68 20.081 13.19 19.98C17.135 18.624 20 14.782 20 10.254C20 4.59 15.52 0 10 0Z"
+                    fill="#333333"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex items-center my-5">
+              <div className="flex-1 border-t border-gray-200"></div>
+              <p className="mx-4 text-sm text-gray-500">or continue with</p>
+              <div className="flex-1 border-t border-gray-200"></div>
+            </div>
+
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleSubmit()
+              }}
+            >
+              {/* Name fields */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                    First Name<span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="firstName"
+                    type="text"
+                    placeholder="First Name"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Name
+                  </label>
+                  <input
+                    id="lastName"
+                    type="text"
+                    placeholder="Last Name"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Email */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                  Email<span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail size={18} className="text-gray-400" />
+                  </div>
+                  <input
+                    id="email"
+                    type="email"
+                    placeholder="name@company.com"
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Phone (Optional) */}
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone <span className="text-gray-400 text-xs">(Optional)</span>
+                </label>
+                <div className="flex">
+                  <div className="flex-shrink-0 relative" ref={countryCodeRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowCountryCodes(!showCountryCodes)}
+                      className="flex items-center justify-between w-20 border border-gray-300 rounded-lg px-2 py-2.5 bg-gray-50 hover:bg-gray-100"
+                    >
+                      <span className="text-gray-700 text-sm">{countryCode}</span>
+                      <ChevronDown size={14} className="text-gray-500" />
+                    </button>
+
+                    {showCountryCodes && (
+                      <div className="absolute mt-1 py-1 w-24 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-40 overflow-y-auto">
+                        {countryCodes.map((code) => (
+                          <button
+                            key={code}
+                            type="button"
+                            onClick={() => {
+                              setCountryCode(code)
+                              setShowCountryCodes(false)
+                            }}
+                            className={`flex items-center px-3 py-1.5 w-full text-left hover:bg-gray-50 text-sm ${
+                              countryCode === code ? "bg-blue-50 text-blue-600" : "text-gray-700"
+                            }`}
+                          >
+                            {code}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    id="phone"
+                    type="tel"
+                    placeholder="Phone number"
+                    className="flex-grow ml-2 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Gender - Fixed sizing for mobile */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Gender <span className="text-gray-400 text-xs">(Optional)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setGender("male")}
+                    className={`flex items-center justify-center px-4 py-2 rounded-lg border ${
+                      gender === "male"
+                        ? "border-blue-500 bg-blue-50 text-blue-600"
+                        : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <User size={16} className={`mr-2 ${gender === "male" ? "text-blue-600" : "text-gray-500"}`} />
+                    <span>Male</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGender("female")}
+                    className={`flex items-center justify-center px-4 py-2 rounded-lg border ${
+                      gender === "female"
+                        ? "border-blue-500 bg-blue-50 text-blue-600"
+                        : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <User size={16} className={`mr-2 ${gender === "female" ? "text-blue-600" : "text-gray-500"}`} />
+                    <span>Female</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGender("other")}
+                    className={`flex items-center justify-center px-4 py-2 rounded-lg border ${
+                      gender === "other"
+                        ? "border-blue-500 bg-blue-50 text-blue-600"
+                        : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <span>Other</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Password */}
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                  Password<span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock size={18} className="text-gray-400" />
+                  </div>
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                  />
+                  <div
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                  >
+                    {showPassword ? (
+                      <EyeOff size={18} className="text-gray-400" />
+                    ) : (
+                      <Eye size={18} className="text-gray-400" />
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Must be at least 6 characters</p>
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirm Password<span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock size={18} className="text-gray-400" />
+                  </div>
+                  <input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                  <div
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff size={18} className="text-gray-400" />
+                    ) : (
+                      <Eye size={18} className="text-gray-400" />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Terms and Conditions */}
+              <div className="flex items-start mt-2">
+                <div className="flex items-center h-5">
+                  <input
+                    id="terms"
+                    type="checkbox"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    checked={agreeToTerms}
+                    onChange={(e) => setAgreeToTerms(e.target.checked)}
+                    required
+                  />
+                </div>
+                <div className="ml-3">
+                  <label htmlFor="terms" className="text-xs text-gray-600">
+                    I agree to SkillBridge's{" "}
+                    <a href="#" className="text-blue-600 hover:text-blue-800 underline">
+                      Privacy Policy
+                    </a>{" "}
+                    and{" "}
+                    <a href="#" className="text-blue-600 hover:text-blue-800 underline">
+                      Terms of Service
+                    </a>
+                  </label>
+                </div>
+              </div>
+
+              {/* Submit button */}
+              <button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg transition font-medium flex items-center justify-center mt-4"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <svg
+                    className="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                ) : (
+                  "Create account"
+                )}
+              </button>
+
+              <div className="text-center mt-4">
+                <p className="text-gray-600 text-sm">
+                  Already have an account?{" "}
+                  <a href="#" className="text-blue-600 font-medium hover:text-blue-700" onClick={handleLoginPage}>
+                    Sign in
+                  </a>
+                </p>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default SignUpPage

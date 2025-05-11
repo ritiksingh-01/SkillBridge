@@ -10,6 +10,12 @@ const HomePage = () => {
   function handleClick(){
     navigate('/becomeMentor');
   }
+  function handleLoginPage(){
+    navigate('/login')
+  }
+  function handleSignUpPage(){
+    navigate('/signUp')
+  }
   return (
     <div className="w-full min-h-screen bg-white flex flex-col justify-start items-start">
       {/* Navigation Bar - More Professional */}
@@ -33,10 +39,10 @@ const HomePage = () => {
         
         <div className="flex items-center gap-4">
           <div className="px-5 py-2 bg-gray-100 hover:bg-gray-200 transition-colors rounded-lg cursor-pointer">
-            <div className="text-gray-700 font-medium">Login</div>
+            <div className="text-gray-700 font-medium" onClick={handleLoginPage}>Login</div>
           </div>
           <div className="px-5 py-2 bg-blue-600 hover:bg-blue-700 transition-colors rounded-lg cursor-pointer shadow-md shadow-blue-200">
-            <div className="text-white font-medium">Sign Up</div>
+            <div className="text-white font-medium" onClick={handleSignUpPage}>Sign Up</div>
           </div>
         </div>
       </div>
