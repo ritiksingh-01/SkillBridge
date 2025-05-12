@@ -4,10 +4,11 @@ import HomePage from './Pages/HomePage'
 import BecomeMentorPage from './Pages/BecomeMentorPage';
 import LoginPage from './Pages/LoginPage';
 import SignUpPage from './Pages/SignUpPage';
+import FindMentorsPage from './Pages/FindMentorsPage';
 
 const router = createBrowserRouter([
   {
-    path: "/",
+    path: '/',
     element:
     <div>
     <HomePage />
@@ -24,6 +25,10 @@ const router = createBrowserRouter([
   {
     path: "/signUp",
     element: <SignUpPage/>
+  },
+  {
+    path: "/findMentorPage",
+    element: <FindMentorsPage/>
   },
 ]);
 
