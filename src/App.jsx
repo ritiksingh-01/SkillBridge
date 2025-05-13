@@ -1,17 +1,18 @@
 import './App.css'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
-import HomePage from './Pages/HomePage'
+import HomePage2 from './Pages/HomePage2'
 import BecomeMentorPage from './Pages/BecomeMentorPage';
 import LoginPage from './Pages/LoginPage';
 import SignUpPage from './Pages/SignUpPage';
 import FindMentorsPage from './Pages/FindMentorsPage';
+import HomePage from './Pages/HomePage';
 
 const router = createBrowserRouter([
   {
     path: '/',
     element:
     <div>
-    <HomePage />
+    <HomePage/>
     </div>
   },
   {
