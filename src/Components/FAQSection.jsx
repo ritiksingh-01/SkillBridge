@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { motion } from "framer-motion"; // Added for animations
+import { motion, AnimatePresence } from "framer-motion"; // Added AnimatePresence for smooth exit animations
 
 const FAQSection = () => {
   const [openIndex, setOpenIndex] = useState(null);
@@ -43,6 +43,42 @@ const FAQSection = () => {
     setOpenIndex(openIndex === index ? null : index);
   };
   
+  // Animation variants for FAQ items
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+  
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        duration: 0.5,
+        ease: "easeOut"
+      }
+    }
+  };
+  
+  // Animation variants for the content of each FAQ
+  const contentVariants = {
+    hidden: { opacity: 0, height: 0 },
+    visible: { 
+      opacity: 1, 
+      height: "auto",
+      transition: { 
+        duration: 0.3,
+        ease: "easeInOut"
+      }
+    }
+  };
+  
   return (
     <div className="w-full px-6 md:px-16 lg:px-24 py-20 pb-16 bg-gray-50">
       <div className="max-w-7xl mx-auto">
@@ -57,7 +93,7 @@ const FAQSection = () => {
             <span className="text-blue-700 text-sm font-medium">Common Questions</span>
           </motion.div>
           <motion.h2
-            className="text-3xl md:text-4xl font-bold mb-4"
+            className="text-3xl md:text-4xl font-bold mb-10"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
@@ -67,45 +103,78 @@ const FAQSection = () => {
           </motion.h2>
           
           <div className="max-w-4xl mx-auto">
-            <div className="space-y-5">
+            <motion.div 
+              className="space-y-5"
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.1 }}
+            >
               {faqs.map((faq, index) => (
-                <div 
+                <motion.div 
                   key={faq.id}
-                  className={`bg-white rounded-xl overflow-hidden border transition-all ${
+                  variants={itemVariants}
+                  className={`bg-white rounded-xl overflow-hidden border transition-all duration-300 ${
                     openIndex === index ? "border-blue-300 shadow-md" : "border-gray-200"
                   }`}
+                  whileHover={{ 
+                    scale: 1.01, 
+                    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05)",
+                    borderColor: openIndex === index ? "#93c5fd" : "#e5e7eb" 
+                  }}
                 >
-                  <button
+                  <motion.button
                     className="w-full flex justify-between items-center p-7 text-left focus:outline-none cursor-pointer"
                     onClick={() => toggleFAQ(index)}
+                    whileTap={{ scale: 0.99 }}
                   >
                     <span className="font-semibold text-gray-800">{faq.question}</span>
-                    {openIndex === index ? (
-                      <ChevronUp className="w-5 h-5 text-blue-600" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5 text-gray-600" />
-                    )}
-                  </button>
+                    <motion.div
+                      animate={{ rotate: openIndex === index ? 180 : 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {openIndex === index ? (
+                        <ChevronUp className="w-5 h-5 text-blue-600" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-gray-600" />
+                      )}
+                    </motion.div>
+                  </motion.button>
                   
-                  <div 
-                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                      openIndex === index ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-                    }`}
-                  >
-                    <div className="p-7 pt-0 text-gray-600">
-                      {faq.answer}
-                    </div>
-                  </div>
-                </div>
+                  <AnimatePresence>
+                    {openIndex === index && (
+                      <motion.div 
+                        initial="hidden"
+                        animate="visible"
+                        exit="hidden"
+                        variants={contentVariants}
+                      >
+                        <div className="p-7 pt-0 text-gray-600">
+                          {faq.answer}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
             
-            <div className="mt-12 text-center">
+            <motion.div 
+              className="mt-12 text-center"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              viewport={{ once: true, amount: 0.5 }}
+            >
               <p className="text-gray-600 mb-4">Still have questions?</p>
-              <button className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition-colors inline-flex items-center gap-2 cursor-pointer">
+              <motion.button 
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition-colors inline-flex items-center gap-2 cursor-pointer"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
                 Contact Support
-              </button>
-            </div>
+              </motion.button>
+            </motion.div>
           </div>
         </div>
       </div>

@@ -1,19 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import Footer from "../Components/Footer";
-import { 
-  Star, 
+import {  
   CheckCircle, 
   ArrowRight, 
   Calendar, 
   Briefcase, 
-  Users, 
-  Search, 
-  BookOpen, 
+  Search,  
   Award, 
   Globe, 
   Play,
-  ChevronLeft,
-  ChevronRight,
   MessageCircle,
   Zap,
   BarChart,
@@ -28,12 +23,13 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Canvas } from "@react-three/fiber";
 import { Float, PresentationControls, Environment } from "@react-three/drei";
-import Image1 from '../assets/1.jpg'; 
 import HeroSection from "../Components/HeroSection";
 import PopularMentorsSection from "../Components/PopularMentorsSection";
 import TestimonialSlider from "../Components/TestimonialSlider";
 import FAQSection from "../Components/FAQSection";
 import NewsletterSignup from "../Components/NewsletterSignup";
+import LogoCarousel from "../Components/LogoCarousel";
+import HowItWorksSection from "../Components/HowItWorksSection";
 
 // Animated 3D Model Component
 const Model3D = () => {
@@ -314,22 +310,7 @@ const HomePage = () => {
       <HeroSection/>
 
       {/* Trusted By Section */}
-      <div className="w-full px-6 md:px-16 lg:px-24 py-12 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-8">
-            <p className="text-gray-500 font-medium tracking-wide">TRUSTED BY PROFESSIONALS FROM</p>
-          </div>
-          
-          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/4/4c/Google_2015_logo.svg" alt="Google logo" className="h-8 grayscale opacity-70 hover:opacity-100 hover:grayscale-0 transition-all duration-300" />
-            <img src="https://upload.wikimedia.org/wikipedia/commons/0/0e/Netflix_2015_logo.svg" alt="Netflix logo" className="h-8 grayscale opacity-70 hover:opacity-100 hover:grayscale-0 transition-all duration-300" />
-            <img src="https://upload.wikimedia.org/wikipedia/commons/4/4e/Adobe_Logo.svg" alt="Adobe logo" className="h-8 grayscale opacity-70 hover:opacity-100 hover:grayscale-0 transition-all duration-300" />
-            <img src="https://upload.wikimedia.org/wikipedia/commons/4/48/Microsoft_logo.svg" alt="Microsoft logo" className="h-8 grayscale opacity-70 hover:opacity-100 hover:grayscale-0 transition-all duration-300" />
-            <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Apple logo" className="h-8 grayscale opacity-70 hover:opacity-100 hover:grayscale-0 transition-all duration-300" />
-            <img src="https://upload.wikimedia.org/wikipedia/commons/2/2f/IBM_logo.svg" alt="IBM logo" className="h-8 grayscale opacity-70 hover:opacity-100 hover:grayscale-0 transition-all duration-300" />
-          </div>
-        </div>
-      </div>
+      <LogoCarousel/> 
 
       {/* Enhanced Video Introduction Section */}
       <div className="w-full px-6 md:px-16 lg:px-24 py-20 bg-gradient-to-br from-blue-50 to-white">
@@ -415,76 +396,7 @@ const HomePage = () => {
       </div>
 
       {/* How It Works Section - Modern Cards with Illustrations */}
-      <div className="w-full px-6 md:px-16 lg:px-24 py-20 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center px-3 py-1 bg-blue-100 rounded-full mb-4">
-              <span className="text-blue-700 text-sm font-medium">Simple Process</span>
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">How SkillBridge Works</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">Our streamlined process makes it easy to find the perfect mentor and start growing professionally</p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { 
-                icon: <Search className="w-8 h-8 text-blue-600" />, 
-                title: "Find Your Mentor", 
-                description: "Browse our curated network of industry experts, filter by specialty, and find the perfect match for your goals.",
-                color: "from-blue-500 to-blue-600",
-                delay: 0.1
-              },
-              { 
-                icon: <Calendar className="w-8 h-8 text-indigo-600" />, 
-                title: "Schedule Sessions", 
-                description: "Book one-on-one video sessions at times that work for you, with smart calendar integration.",
-                color: "from-indigo-500 to-indigo-600",
-                delay: 0.3
-              },
-              { 
-                icon: <Award className="w-8 h-8 text-purple-600" />, 
-                title: "Grow & Succeed", 
-                description: "Receive personalized guidance, actionable feedback, and track your progress toward your career goals.",
-                color: "from-purple-500 to-purple-600",
-                delay: 0.5
-              }
-            ].map((step, index) => (
-              <motion.div 
-                key={index}
-                className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 relative overflow-hidden group"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: step.delay }}
-                viewport={{ once: true, amount: 0.3 }}
-              >
-                <div className={`absolute -right-20 -bottom-20 w-64 h-64 rounded-full bg-gradient-to-r ${step.color} opacity-10 group-hover:opacity-20 transition-opacity duration-500`}></div>
-                
-                <div className="relative z-10">
-                  <div className="mb-6 w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center shadow-md">
-                    {step.icon}
-                  </div>
-                  
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-800 font-bold text-sm">
-                      {index + 1}
-                    </div>
-                    <h3 className="text-xl font-bold">{step.title}</h3>
-                  </div>
-                  
-                  <p className="text-gray-600 mb-6">{step.description}</p>
-                  
-                  <motion.div 
-                    className="inline-flex items-center text-blue-600 font-medium cursor-pointer"
-                    whileHover={{ x: 5 }}
-                  >
-                    Learn more <ArrowRight className="w-4 h-4 ml-2" />
-                  </motion.div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <HowItWorksSection/>
 
       {/* Success Metrics Section - Enhanced with Animations */}
       <div className="w-full px-6 md:px-16 lg:px-24 py-24 bg-gradient-to-br from-blue-900 via-indigo-900 to-blue-800 text-white relative overflow-hidden">
@@ -655,11 +567,9 @@ const HomePage = () => {
       </div>
 
       {/* Popular Mentors Section */}
-      <div className="w-full px-6 md:px-12 lg:px-16 py-10 bg-gray-50">
-            <div>
-              <PopularMentorsSection/>
-          </div>
-      </div>
+        <PopularMentorsSection/>
+
+
       {/* Testimonials Section */}
       <div className="w-full  bg-white">
             <TestimonialSlider/>
@@ -679,4 +589,3 @@ const HomePage = () => {
 };
 
 export default HomePage;
-

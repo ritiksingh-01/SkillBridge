@@ -2,14 +2,6 @@ import React from "react";
 import { Star } from "lucide-react";
 
 const TestimonialSlider = () => {
-  const mentorImages = {
-    "David Wilson": "https://randomuser.me/api/portraits/men/44.jpg",
-    "Priya Sharma": "https://randomuser.me/api/portraits/women/46.jpg",
-    "Alex Chen": "https://randomuser.me/api/portraits/women/65.jpg",
-    "Lisa Zhang": "https://randomuser.me/api/portraits/women/52.jpg",
-    "Robert Johnson": "https://randomuser.me/api/portraits/men/68.jpg"
-  };
-
   const testimonials = [
     {
       text: "Working with my mentor transformed my career. I gained skills that helped me land a promotion within 3 months. The personalized guidance was exactly what I needed.",
@@ -94,16 +86,13 @@ const TestimonialSlider = () => {
                   </div>
                   <div>
                     <div className="font-bold">{item.name}</div>
-                    <div className="text-gray-500 text-sm">{item.title}</div>
+                    <div className="text-gray-500 text-sm ">{item.title}</div>
                   </div>
                 </div>
                 <div className="mt-3 px-3 py-2 bg-blue-50 rounded-lg">
                   <p className="text-blue-700 text-xs font-medium">Mentored by</p>
                   <p className="text-gray-800 text-xs font-medium">{item.mentorName}</p>
                   <p className="text-gray-600 text-xs">{item.mentorRole}</p>
-                  <div className="mt-2 w-10 h-10 rounded-full overflow-hidden bg-gray-200">
-                    <img src={mentorImages[item.mentorName]} alt={item.mentorName} className="w-full h-full object-cover" /> {/* Mentor image */}
-                  </div>
                 </div>
               </div>
             ))}
