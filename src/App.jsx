@@ -6,6 +6,7 @@ import LoginPage from './Pages/LoginPage';
 import SignUpPage from './Pages/SignUpPage';
 import FindMentorsPage from './Pages/FindMentorsPage';
 import HomePage from './Pages/HomePage';
+import MentorProfilePage from './Pages/MentorProfilePage';
 
 const router = createBrowserRouter([
   {
@@ -30,6 +31,10 @@ const router = createBrowserRouter([
   {
     path: "/findMentorPage",
     element: <FindMentorsPage/>
+  },
+  {
+    path: "/mentorProfile",
+    element: <MentorProfilePage/>
   },
 ]);
 

@@ -1,7 +1,12 @@
 import React from 'react';
 import image1 from "../assets/image3.jpg";
+import { useNavigate } from 'react-router-dom';
 
 export default function MentorBanner() {
+  const navigate = useNavigate();
+  function handleAppyMentor(){
+    navigate('/becomeMentor')
+  }
   return (
     <div className="container mx-auto px-4 mt-16">
       <div className="relative bg-blue-600 rounded-3xl shadow-xl overflow-hidden">
@@ -15,7 +20,7 @@ export default function MentorBanner() {
             <p className="text-blue-100 mb-6 text-lg">
               Share your expertise, build your personal brand, and earn while helping others grow in their careers.
             </p>
-            <button className="px-6 py-3 bg-white text-blue-700 rounded-lg hover:bg-blue-50 transition-colors shadow-md font-medium">
+            <button className="px-6 py-3 bg-white text-blue-700 rounded-lg hover:bg-blue-50 transition-colors shadow-md font-medium cursor-pointer" onClick={handleAppyMentor}>
               Apply as mentor
             </button>
           </div>

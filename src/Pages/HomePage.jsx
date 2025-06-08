@@ -182,6 +182,9 @@ const HomePage = () => {
   function handleSignUpPage() {
     navigate('/signUp');
   }
+  function handleFindMentor(){
+    navigate('/findMentorPage')
+  }
   
   // Simulated data for skill domain categories
   const skillCategories = [
@@ -233,6 +236,7 @@ const HomePage = () => {
           <motion.div 
             className="text-gray-700 font-medium hover:text-blue-600 transition-colors cursor-pointer"
             whileHover={{ scale: 1.05 }}
+            onClick={handleFindMentor}
           >
             Find Mentors
           </motion.div>

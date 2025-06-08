@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import {
   Search,
@@ -21,6 +19,7 @@ import MentorCard from "../Components/MentorCard"
 import Footer from "../Components/Footer"
 import Header from "../Components/Header"
 import MentorBanner from "../Banners/MentorBanner"
+import MentorProfilePage from "./MentorProfilePage"
 const FindMentorsPage = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedFilters, setSelectedFilters] = useState({

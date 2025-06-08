@@ -91,7 +91,7 @@ const HomePage2 = () => {
         </div>
  </div>
       {/* Hero Section */}
-      <HeroSection />
+      {/* <HeroSection /> */}
       <HeroSection2/>
 
       {/* Video Introduction Section */}
