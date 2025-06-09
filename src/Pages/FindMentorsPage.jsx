@@ -14,6 +14,7 @@ import {
   Book,
   TrendingUp,
   Zap,
+  Languages,
 } from "lucide-react"
 import MentorCard from "../Components/MentorCard"
 import Footer from "../Components/Footer"
@@ -70,6 +71,7 @@ const FindMentorsPage = () => {
       id: 3,
       name: "Michael Chen",
       role: "Marketing Executive",
+      company: "Google",
       experience: "Former Spotify, Netflix",
       rating: 4.9,
       reviews: 19,
@@ -83,6 +85,7 @@ const FindMentorsPage = () => {
       id: 4,
       name: "Elena Rodriguez",
       role: "UX Design Lead",
+      company: "Google",
       experience: "Former Apple, Airbnb",
       rating: 5.0,
       reviews: 27,
@@ -96,6 +99,7 @@ const FindMentorsPage = () => {
       id: 5,
       name: "James Wilson",
       role: "CTO",
+      company: "Google",
       experience: "Former Oracle, IBM",
       rating: 4.7,
       reviews: 32,
@@ -108,6 +112,7 @@ const FindMentorsPage = () => {
     {
       id: 6,
       name: "Aisha Patel",
+      company: "Google",
       role: "Data Science Director",
       experience: "Former Tesla, Uber",
       rating: 4.9,
@@ -121,6 +126,7 @@ const FindMentorsPage = () => {
     {
       id: 7,
       name: "Laura Smith",
+      company: "Google",
       role: "Product Marketing Manager",
       experience: "Former Google, Facebook",
       rating: 4.6,
@@ -135,6 +141,7 @@ const FindMentorsPage = () => {
       id: 8,
       name: "Robert Brown",
       role: "Software Engineer",
+      company: "Google",
       experience: "Former IBM, Intel",
       rating: 4.5,
       reviews: 15,
@@ -148,6 +155,7 @@ const FindMentorsPage = () => {
       id: 9,
       name: "Nina Patel",
       role: "Data Analyst",
+      company: "Google",
       experience: "Former Deloitte, Accenture",
       rating: 4.8,
       reviews: 20,
@@ -161,6 +169,7 @@ const FindMentorsPage = () => {
       id: 10,
       name: "Chris Evans",
       role: "Cybersecurity Specialist",
+      company: "Google",
       experience: "Former Cisco, Symantec",
       rating: 4.9,
       reviews: 30,
@@ -174,6 +183,7 @@ const FindMentorsPage = () => {
       id: 11,
       name: "Sophia Lee",
       role: "Cloud Solutions Architect",
+      company: "Google",
       experience: "Former AWS, Google Cloud",
       rating: 4.7,
       reviews: 28,
@@ -187,6 +197,7 @@ const FindMentorsPage = () => {
       id: 12,
       name: "Daniel Kim",
       role: "AI Research Scientist",
+      company: "Google",
       experience: "Former OpenAI, IBM",
       rating: 4.8,
       reviews: 25,
@@ -228,10 +239,10 @@ const FindMentorsPage = () => {
       "Analytics",
     ],
     price: [
-      { label: "Under $50/hr", value: "under50" },
-      { label: "$50-75/hr", value: "50-75" },
-      { label: "$75-100/hr", value: "75-100" },
-      { label: "$100+/hr", value: "over100" },
+      { label: "Under ₹50/hr", value: "under50" },
+      { label: "₹50-75/hr", value: "50-75" },
+      { label: "₹75-100/hr", value: "75-100" },
+      { label: "₹100+/hr", value: "over100" },
     ],
     rating: [
       { label: "4.5+ stars", value: 4.5 },
@@ -334,7 +345,6 @@ const FindMentorsPage = () => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Close filter panel when clicking outside
       if (isFilterOpen && !event.target.closest(".filter-panel")) {
         setIsFilterOpen(false)
       }
