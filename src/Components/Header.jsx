@@ -70,8 +70,8 @@ const Header = ({ userProfilePic }) => {
         <NavItem 
           icon={<FontAwesomeIcon icon={faEnvelope} />} 
           text="Messaging" 
-          active={isActive('/messages')} 
-          onClick={() => handleNavigation('/messages')} 
+          active={isActive('/message')} 
+          onClick={() => handleNavigation('/message')} 
         />
         <NavItem 
           icon={<FontAwesomeIcon icon={faBell} />} 

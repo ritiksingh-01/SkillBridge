@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import MentorCard from "./MentorCard";
+import { useNavigate } from "react-router-dom";
 
 const PopularMentorsSection = ({ title = "Featured Mentors", subtitle = "Connect with industry leaders who are ready to share their expertise and guide your career" }) => {
   // State for pagination and filtering
@@ -8,6 +9,12 @@ const PopularMentorsSection = ({ title = "Featured Mentors", subtitle = "Connect
   const [activeFilter, setActiveFilter] = useState("all");
   const [isVisible, setIsVisible] = useState(false);
   const mentorsPerPage = 4;
+
+  const navigate = useNavigate();
+
+  function handleFindMentor(){
+    navigate('/findMentorPage')
+  }
   
   // Make component visible after mounting (for animation)
   useEffect(() => {
@@ -295,7 +302,7 @@ const PopularMentorsSection = ({ title = "Featured Mentors", subtitle = "Connect
               </button>
             </div>
             
-            <button className="px-5 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2 cursor-pointer whitespace-nowrap">
+            <button className="px-5 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2 cursor-pointer whitespace-nowrap" onClick={handleFindMentor}>
               <span>View All Mentors</span>
               <ArrowRight className="w-4 h-4" />
             </button>

@@ -288,7 +288,7 @@ const HomePage = () => {
         >
           <div className="flex flex-col gap-6">
             <div className="text-gray-800 font-medium py-3 border-b cursor-pointer">Home</div>
-            <div className="text-gray-800 font-medium py-3 border-b cursor-pointer">Find Mentors</div>
+            <div className="text-gray-800 font-medium py-3 border-b cursor-pointer" onClick={handleFindMentor}>Find Mentors</div>
             <div className="text-gray-800 font-medium py-3 border-b cursor-pointer">About Us</div>
             <div className="text-gray-800 font-medium py-3 border-b cursor-pointer">Resources</div>
             <div className="text-gray-800 font-medium py-3 border-b cursor-pointer">Contact</div>

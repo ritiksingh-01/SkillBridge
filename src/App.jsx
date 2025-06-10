@@ -7,6 +7,8 @@ import SignUpPage from './Pages/SignUpPage';
 import FindMentorsPage from './Pages/FindMentorsPage';
 import HomePage from './Pages/HomePage';
 import MentorProfilePage from './Pages/MentorProfilePage';
+import MessagePage from './Pages/MessagePage';
+import NotificationPage from './Pages/NotificationPage';
 
 const router = createBrowserRouter([
   {
@@ -35,6 +37,14 @@ const router = createBrowserRouter([
   {
     path: "/mentorProfile",
     element: <MentorProfilePage/>
+  },
+  {
+    path: "/message",
+    element: <MessagePage/>
+  },
+  {
+    path: "/notifications",
+    element: <NotificationPage/>
   },
 ]);
 
