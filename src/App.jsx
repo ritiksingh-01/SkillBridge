@@ -1,14 +1,14 @@
 import './App.css'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
-import HomePage2 from './Pages/HomePage2'
-import BecomeMentorPage from './Pages/BecomeMentorPage';
-import LoginPage from './Pages/LoginPage';
-import SignUpPage from './Pages/SignUpPage';
-import FindMentorsPage from './Pages/FindMentorsPage';
-import HomePage from './Pages/HomePage';
-import MentorProfilePage from './Pages/MentorProfilePage';
-import MessagePage from './Pages/MessagePage';
-import NotificationPage from './Pages/NotificationPage';
+import LoginPage from './Pages/AuthPage/LoginPage';
+import SignUpPage from './Pages/AuthPage/SignUpPage';
+import FindMentorsPage from './Pages/FindMentorPage/FindMentorsPage';
+import HomePage from './Pages/HomePage/HomePage';
+import MentorProfilePage from './Pages/MentorProfilePage/MentorProfilePage';
+import MessagePage from './Pages/MessagePage/MessagePage';
+import NotificationPage from './Pages/NotificationPage/NotificationPage';
+import BecomeMentorPage from './Pages/BecomeMentorPage/BecomeMentorPage';
+import MenteeProfile from './Pages/MenteeProfilePage/MenteeProfile';
 
 const router = createBrowserRouter([
   {
@@ -45,6 +45,10 @@ const router = createBrowserRouter([
   {
     path: "/notifications",
     element: <NotificationPage/>
+  },
+  {
+    path: "/menteeProfile",
+    element: <MenteeProfile/>
   },
 ]);
 

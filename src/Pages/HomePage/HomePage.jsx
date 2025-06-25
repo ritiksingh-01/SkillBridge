@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import Footer from "../Components/Footer";
 import {  
   CheckCircle, 
   ArrowRight, 
@@ -23,13 +22,14 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Canvas } from "@react-three/fiber";
 import { Float, PresentationControls, Environment } from "@react-three/drei";
-import HeroSection from "../Components/HeroSection";
-import PopularMentorsSection from "../Components/PopularMentorsSection";
-import TestimonialSlider from "../Components/TestimonialSlider";
-import FAQSection from "../Components/FAQSection";
-import NewsletterSignup from "../Components/NewsletterSignup";
-import LogoCarousel from "../Components/LogoCarousel";
-import HowItWorksSection from "../Components/HowItWorksSection";
+import HeroSection from "../../Components/HeroSection";
+import PopularMentorsSection from "../../Components/PopularMentorsSection";
+import TestimonialSlider from "../../Components/TestimonialSlider";
+import FAQSection from "../../Components/FAQSection";
+import NewsletterSignup from "../../Components/NewsletterSignup";
+import LogoCarousel from "../../Components/LogoCarousel";
+import HowItWorksSection from "../../Components/HowItWorksSection";
+import Footer from "../../Components/Footer";
 
 // Animated 3D Model Component
 const Model3D = () => {
@@ -587,7 +587,7 @@ const HomePage = () => {
         <NewsletterSignup />
       </div>
 
-      <Footer />
+      <Footer/>
     </div>
   );
 };

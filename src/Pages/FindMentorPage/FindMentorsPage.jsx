@@ -16,11 +16,11 @@ import {
   Zap,
   Languages,
 } from "lucide-react"
-import MentorCard from "../Components/MentorCard"
-import Footer from "../Components/Footer"
-import Header from "../Components/Header"
-import MentorBanner from "../Banners/MentorBanner"
-import MentorProfilePage from "./MentorProfilePage"
+import MentorCard from "../../Components/MentorCard"
+import Footer from "../../Components/Footer"
+import Header from "../../Components/Header"
+import MentorBanner from "../../Banners/MentorBanner"
+import MentorProfilePage from "../MentorProfilePage/MentorProfilePage"
 const FindMentorsPage = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedFilters, setSelectedFilters] = useState({
