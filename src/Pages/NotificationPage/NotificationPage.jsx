@@ -20,7 +20,7 @@ import {
   CheckCheck,
   Filter
 } from 'lucide-react';
-import Header from '../Components/Header';
+import Header from '../../Components/Header';
 
 const NotificationPage = () => {
   const [activeFilter, setActiveFilter] = useState('all');

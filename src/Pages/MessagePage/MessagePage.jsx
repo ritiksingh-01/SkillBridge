@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Send, Paperclip, ArrowLeft, Search, Calendar, ChevronDown, MoreVertical, Phone, Video, Clock, Star, Filter } from 'lucide-react';
-import Header from '../Components/Header';
-import Footer from '../Components/Footer';
+import Header from '../../Components/Header';
+import Footer from '../../Components/Footer';
 // Query Message Component
 const QueryMessage = ({ message, timestamp, onAttachment }) => {
   return (

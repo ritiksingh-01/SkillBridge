@@ -16,7 +16,7 @@ import {
   Upload,
   User
 } from 'lucide-react';
-import Header from '../Components/Header';
+import Header from '../../Components/Header';
 import { useNavigate } from 'react-router-dom';
 
 const BecomeMentorPage = () => {

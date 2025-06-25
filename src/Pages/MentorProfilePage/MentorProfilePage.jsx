@@ -25,9 +25,9 @@ import {
   Building,
 } from "lucide-react"
 import { useLocation } from "react-router-dom"
-import Footer from "../Components/Footer"
-import Header from "../Components/Header"
-import MentorCard from "../Components/MentorCard"
+import Footer from "../../Components/Footer"
+import Header from "../../Components/Header"
+import MentorCard from "../../Components/MentorCard"
 
 const MentorProfilePage = () => {
   const [currentSlide, setCurrentSlide] = useState(0)

@@ -112,7 +112,7 @@ const Header = ({ userProfilePic }) => {
               <ProfileMenuItem 
                 icon={<FontAwesomeIcon icon={faUser } />} 
                 text="View Profile" 
-                onClick={() => handleNavigation('/profile')} 
+                onClick={() => handleNavigation('/menteeProfile')} 
               />
               <ProfileMenuItem 
                 icon={<FontAwesomeIcon icon={faCog} />} 
