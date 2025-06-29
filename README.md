@@ -45,18 +45,27 @@
 
 ### Frontend Architecture
 ```
-React.js + Tailwind CSS + React Router DOM
+React.js + Tailwind CSS + React Router DOM + Axios
 ```
 
-### State Management
+### Backend Architecture
 ```
-Context API / Custom Hooks
+Node.js + Express.js + MongoDB + Socket.io
 ```
 
-### Future Integrations
+### Authentication & Security
 ```
-Socket.io / Firebase (Chat) | Node.js + Express.js + MongoDB (Backend)
-Razorpay / Stripe (Payments)
+JWT + bcryptjs + Helmet + Rate Limiting
+```
+
+### Payment Integration
+```
+Stripe Payment Gateway
+```
+
+### Real-time Features
+```
+Socket.io for Live Chat & Notifications
 ```
 
 </div>
@@ -66,24 +75,132 @@ Razorpay / Stripe (Payments)
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js (v14+)
+- Node.js (v16+)
+- MongoDB (local or Atlas)
 - npm or yarn
 
-### Installation Steps
+### Backend Setup
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/ritiksingh-01/skillbridge.git
-cd skillbridge
+# 1. Navigate to server directory
+cd server
 
 # 2. Install dependencies
 npm install
 
-# 3. Start development server
+# 3. Create environment file
+cp .env.example .env
+
+# 4. Update .env with your MongoDB URI and other configs
+# MONGODB_URI=your_mongodb_connection_string
+# JWT_SECRET=your_jwt_secret
+# STRIPE_SECRET_KEY=your_stripe_secret
+
+# 5. Start the server
 npm run dev
 ```
 
-> 🎉 **That's it!** Open `http://localhost:3000` and start exploring SkillBridge.
+### Frontend Setup
+
+```bash
+# 1. Navigate to root directory
+cd ..
+
+# 2. Install dependencies
+npm install
+
+# 3. Create environment file
+cp .env.example .env
+
+# 4. Update .env with your API URL
+# VITE_API_URL=http://localhost:5000/api
+
+# 5. Start development server
+npm run dev
+```
+
+> 🎉 **That's it!** 
+> - Backend: `http://localhost:5000`
+> - Frontend: `http://localhost:5173`
+
+---
+
+## 📁 Project Structure
+
+```
+skillbridge/
+├── server/                 # Backend API
+│   ├── models/            # MongoDB schemas
+│   ├── routes/            # API endpoints
+│   ├── middleware/        # Auth & validation
+│   └── server.js          # Express server
+├── src/                   # Frontend React app
+│   ├── components/        # Reusable components
+│   ├── pages/            # Page components
+│   ├── context/          # React context
+│   ├── services/         # API services
+│   └── App.jsx           # Main app component
+└── README.md
+```
+
+---
+
+## 🔑 Key Features Implementation
+
+### 🔐 Authentication System
+- JWT-based authentication
+- Role-based access control (Mentor/Mentee)
+- Protected routes
+- Secure password hashing
+
+### 📊 Dashboard Systems
+- **Mentor Dashboard**: Session management, earnings tracking, mentee overview
+- **Mentee Dashboard**: Learning progress, mentor discovery, session history
+
+### 💬 Real-time Communication
+- Socket.io integration for live messaging
+- Session-based chat rooms
+- File sharing capabilities
+- Read receipts
+
+### 💳 Payment Integration
+- Stripe payment processing
+- Secure payment intents
+- Webhook handling for payment confirmations
+- Pricing management
+
+### 🔔 Notification System
+- Real-time notifications
+- Email notifications
+- Push notification support
+- Notification preferences
+
+---
+
+## 🌐 API Endpoints
+
+### Authentication
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+- `GET /api/auth/me` - Get current user
+
+### Users
+- `GET /api/users/profile` - Get user profile
+- `PUT /api/users/profile` - Update profile
+
+### Mentors
+- `GET /api/mentors` - Get all mentors
+- `POST /api/mentors/apply` - Apply as mentor
+- `PUT /api/mentors/profile` - Update mentor profile
+
+### Sessions
+- `POST /api/sessions` - Create session
+- `GET /api/sessions` - Get user sessions
+- `PUT /api/sessions/:id/status` - Update session status
+
+### Messages
+- `POST /api/messages` - Send message
+- `GET /api/messages/:sessionId` - Get session messages
 
 ---
 

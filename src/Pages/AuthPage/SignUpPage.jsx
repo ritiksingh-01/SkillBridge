@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Eye, EyeOff, Mail, Lock, User, BookOpen, Users, ArrowLeft, ChevronDown } from "lucide-react"
 import { useNavigate } from "react-router-dom"
+import { useAuth } from '../../context/AuthContext'
 
 const SignUpPage = () => {
   const [showPassword, setShowPassword] = useState(false)
@@ -17,9 +18,11 @@ const SignUpPage = () => {
   const [agreeToTerms, setAgreeToTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [userRole, setUserRole] = useState("mentee")
+  const [error, setError] = useState("")
   const countryCodes = ["+91", "+1", "+44", "+61", "+49", "+33", "+81", "+86"]
   const countryCodeRef = useRef(null)
   const navigate = useNavigate()
+  const { register } = useAuth()
 
   // Click outside to close dropdown
   useEffect(() => {
@@ -47,45 +50,64 @@ const SignUpPage = () => {
     return re.test(email)
   }
 
-  const handleSubmit = () => {
-    let isValid = true
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError("")
 
     if (!firstName) {
-      isValid = false
+      setError("First name is required")
+      return
     }
 
     if (!email || !validateEmail(email)) {
-      isValid = false
+      setError("Please enter a valid email address")
+      return
     }
 
     if (!password || password.length < 6) {
-      isValid = false
+      setError("Password must be at least 6 characters")
+      return
     }
 
     if (password !== confirmPassword) {
-      isValid = false
+      setError("Passwords do not match")
+      return
     }
 
     if (!agreeToTerms) {
-      isValid = false
+      setError("Please agree to the terms and conditions")
+      return
     }
 
-    if (isValid) {
-      setIsLoading(true)
-      // Simulate API call
-      setTimeout(() => {
-        setIsLoading(false)
-        console.log("Signup form submitted", {
-          firstName,
-          lastName,
-          email,
-          phone: phone ? `${countryCode}${phone}` : "",
-          gender,
-          password,
-          userRole,
-        })
-        // Navigate to dashboard or appropriate page
-      }, 1500)
+    setIsLoading(true)
+    
+    try {
+      const userData = {
+        firstName,
+        lastName,
+        email,
+        password,
+        role: userRole,
+        phone: phone ? `${countryCode}${phone}` : "",
+        gender
+      }
+
+      const result = await register(userData)
+      
+      if (result.success) {
+        // Redirect based on user role
+        if (result.user.role === 'mentor') {
+          navigate('/mentor-dashboard')
+        } else {
+          navigate('/mentee-dashboard')
+        }
+      } else {
+        setError(result.error)
+      }
+    } catch (error) {
+      setError('An unexpected error occurred. Please try again.')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -206,6 +228,12 @@ const SignUpPage = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-3">Create an account</h1>
             <p className="text-gray-500 mb-6">Please enter your details to sign up</p>
 
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+            )}
+
             {/* Role selection */}
             <div className="bg-gray-100 p-1 rounded-lg flex mb-6">
               <button
@@ -281,10 +309,7 @@ const SignUpPage = () => {
 
             <form
               className="space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault()
-                handleSubmit()
-              }}
+              onSubmit={handleSubmit}
             >
               {/* Name fields */}
               <div className="grid grid-cols-2 gap-4">

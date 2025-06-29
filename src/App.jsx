@@ -1,5 +1,7 @@
 import './App.css'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext'
+import ProtectedRoute from './components/ProtectedRoute'
 import LoginPage from './Pages/AuthPage/LoginPage';
 import SignUpPage from './Pages/AuthPage/SignUpPage';
 import FindMentorsPage from './Pages/FindMentorPage/FindMentorsPage';
@@ -9,18 +11,37 @@ import MessagePage from './Pages/MessagePage/MessagePage';
 import NotificationPage from './Pages/NotificationPage/NotificationPage';
 import BecomeMentorPage from './Pages/BecomeMentorPage/BecomeMentorPage';
 import MenteeProfile from './Pages/MenteeProfilePage/MenteeProfile';
+import MentorDashboard from './Pages/MentorDashboard/MentorDashboard';
+import MenteeDashboard from './Pages/MenteeDashboard/MenteeDashboard';
 
 const router = createBrowserRouter([
   {
     path: '/',
-    element:
-    <div>
-    <HomePage/>
-    </div>
+    element: <HomePage/>
+  },
+  {
+    path: '/mentor-dashboard',
+    element: (
+      <ProtectedRoute requiredRole="mentor">
+        <MentorDashboard/>
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: '/mentee-dashboard',
+    element: (
+      <ProtectedRoute requiredRole="mentee">
+        <MenteeDashboard/>
+      </ProtectedRoute>
+    )
   },
   {
     path: '/becomeMentor',
-    element: <BecomeMentorPage/>
+    element: (
+      <ProtectedRoute>
+        <BecomeMentorPage/>
+      </ProtectedRoute>
+    )
   },
   {
     path: "/login",
@@ -32,31 +53,51 @@ const router = createBrowserRouter([
   },
   {
     path: "/findMentorPage",
-    element: <FindMentorsPage/>
+    element: (
+      <ProtectedRoute>
+        <FindMentorsPage/>
+      </ProtectedRoute>
+    )
   },
   {
     path: "/mentorProfile",
-    element: <MentorProfilePage/>
+    element: (
+      <ProtectedRoute>
+        <MentorProfilePage/>
+      </ProtectedRoute>
+    )
   },
   {
     path: "/message",
-    element: <MessagePage/>
+    element: (
+      <ProtectedRoute>
+        <MessagePage/>
+      </ProtectedRoute>
+    )
   },
   {
     path: "/notifications",
-    element: <NotificationPage/>
+    element: (
+      <ProtectedRoute>
+        <NotificationPage/>
+      </ProtectedRoute>
+    )
   },
   {
     path: "/menteeProfile",
-    element: <MenteeProfile/>
+    element: (
+      <ProtectedRoute>
+        <MenteeProfile/>
+      </ProtectedRoute>
+    )
   },
 ]);
 
 function App() {
   return (
-    <>
+    <AuthProvider>
       <RouterProvider router={router} />
-    </>
+    </AuthProvider>
   )
 }
 

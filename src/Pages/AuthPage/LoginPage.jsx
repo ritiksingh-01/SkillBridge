@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { Eye, EyeOff, Mail, Lock, User, BookOpen, Users, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [userRole, setUserRole] = useState('mentee');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
   
   function handleBack(){
     navigate('/');
@@ -22,25 +24,39 @@ const LoginPage = () => {
     return re.test(email);
   };
 
-  const handleSubmit = () => {
-    let isValid = true;
-
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    
     if (!email || !validateEmail(email)) {
-      isValid = false;
+      setError('Please enter a valid email address');
+      return;
     }
 
     if (!password || password.length < 6) {
-      isValid = false;
+      setError('Password must be at least 6 characters');
+      return;
     }
 
-    if (isValid) {
-      setIsLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        setIsLoading(false);
-        console.log('Login form submitted', { email, password, userRole });
-        // Navigate to dashboard or appropriate page
-      }, 1500);
+    setIsLoading(true);
+    
+    try {
+      const result = await login({ email, password });
+      
+      if (result.success) {
+        // Redirect based on user role
+        if (result.user.role === 'mentor') {
+          navigate('/mentor-dashboard');
+        } else {
+          navigate('/mentee-dashboard');
+        }
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -154,29 +170,11 @@ const LoginPage = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-3">Welcome back</h1>
             <p className="text-gray-500 mb-8">Please enter your details to sign in</p>
             
-            {/* Role selection */}
-            <div className="bg-gray-100 p-1 rounded-lg flex mb-8">
-              <button 
-                className={`flex-1 py-3 text-sm font-medium rounded-md transition-all cursor-pointer ${
-                  userRole === 'mentee' 
-                    ? 'bg-white text-blue-600 shadow-sm' 
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-                onClick={() => setUserRole('mentee')}
-              >
-                As Mentee 
-              </button>
-              <button 
-                className={`flex-1 py-3 text-sm font-medium rounded-md transition-all cursor-pointer ${
-                  userRole === 'mentor' 
-                    ? 'bg-white text-blue-600 shadow-sm' 
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-                onClick={() => setUserRole('mentor')}
-              >
-                As Mentor
-              </button>
-            </div>
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+            )}
             
             {/* Social logins - Updated with proper icons */}
             <div className="grid grid-cols-3 gap-3 mb-6">
@@ -216,8 +214,8 @@ const LoginPage = () => {
               <button className="flex items-center justify-center border border-gray-300 rounded-lg py-3 px-4 hover:bg-gray-50 transition-colors cursor-pointer">
                 <svg width="20" height="20" viewBox="0 0 20 20">
                   <path 
-                    fill-rule="evenodd" 
-                    clip-rule="evenodd" 
+                    fillRule="evenodd" 
+                    clipRule="evenodd" 
                     d="M10 0C4.475 0 0 4.59 0 10.254C0 14.782 2.865 18.624 6.84 19.98C7.34 20.07 7.525 19.763 7.525 19.495C7.525 19.253 7.516 18.546 7.516 17.684C4.73 18.276 4.15 16.457 4.15 16.457C3.695 15.261 3.035 14.954 3.035 14.954C2.125 14.321 3.105 14.321 3.105 14.321C4.125 14.387 4.655 15.37 4.655 15.37C5.55 16.937 7.005 16.504 7.56 16.236C7.65 15.572 7.91 15.112 8.195 14.854C5.97 14.597 3.635 13.717 3.635 9.766C3.635 8.629 4.015 7.712 4.67 6.993C4.565 6.735 4.215 5.677 4.77 4.266C4.77 4.266 5.615 3.988 7.52 5.316C8.32 5.091 9.17 4.976 10.02 4.976C10.87 4.976 11.72 5.091 12.52 5.316C14.42 3.988 15.265 4.266 15.265 4.266C15.82 5.677 15.47 6.735 15.365 6.993C16.02 7.712 16.4 8.629 16.4 9.766C16.4 13.717 14.065 14.587 11.84 14.844C12.2 15.172 12.51 15.798 12.51 16.768C12.51 18.142 12.5 19.161 12.5 19.495C12.5 19.763 12.68 20.081 13.19 19.98C17.135 18.624 20 14.782 20 10.254C20 4.59 15.52 0 10 0Z" 
                     fill="#333333"
                   />
@@ -231,7 +229,7 @@ const LoginPage = () => {
               <div className="flex-1 border-t border-gray-200"></div>
             </div>
             
-            <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+            <form className="space-y-5" onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <div className="relative">
