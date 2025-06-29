@@ -105,7 +105,7 @@ const TestimonialSlider = () => {
       </div>
       
       {/* CSS for the marquee animation */}
-      <style jsx>{`
+      <style>{`
         @keyframes marquee {
           from {
             transform: translateX(0);
