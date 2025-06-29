@@ -1,136 +1,157 @@
 const express = require('express');
-const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
-const auth = require('../middleware/auth');
-
 const router = express.Router();
 
-// @route   GET /api/users/profile
-// @desc    Get user profile
-// @access  Private
-router.get('/profile', auth, async (req, res) => {
+// Get all users
+router.get('/', async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    const users = await User.find().select('-password');
     res.json({
-      user: {
-        ...user.toObject(),
-        profileCompletion: user.getProfileCompletion()
-      }
+      success: true,
+      count: users.length,
+      data: users
     });
   } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Get users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 });
 
-// @route   PUT /api/users/profile
-// @desc    Update user profile
-// @access  Private
-router.put('/profile', auth, [
-  body('firstName').optional().trim().notEmpty().withMessage('First name cannot be empty'),
-  body('lastName').optional().trim().notEmpty().withMessage('Last name cannot be empty'),
-  body('email').optional().isEmail().normalizeEmail().withMessage('Valid email is required'),
-  body('phone').optional().trim(),
-  body('location').optional().trim(),
-  body('about').optional().isLength({ max: 1000 }).withMessage('About section cannot exceed 1000 characters')
-], async (req, res) => {
+// Create a new user
+router.post('/', async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+    const { firstName, lastName, email, password, role, phone, gender } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'User already exists with this email'
+      });
     }
 
-    const allowedUpdates = [
-      'firstName', 'lastName', 'phone', 'gender', 'location', 
-      'about', 'skills', 'education', 'experience', 'socialLinks',
-      'profileImage', 'coverImage', 'preferences'
-    ];
-
-    const updates = {};
-    Object.keys(req.body).forEach(key => {
-      if (allowedUpdates.includes(key)) {
-        updates[key] = req.body[key];
-      }
+    // Create new user
+    const user = new User({
+      firstName,
+      lastName,
+      email,
+      password,
+      role: role || 'mentee',
+      phone: phone || '',
+      gender: gender || ''
     });
 
-    // Check if email is being updated and if it's unique
-    if (updates.email) {
-      const existingUser = await User.findOne({ 
-        email: updates.email, 
-        _id: { $ne: req.user.id } 
+    const savedUser = await user.save();
+
+    // Return user without password
+    const userResponse = savedUser.toObject();
+    delete userResponse.password;
+
+    res.status(201).json({
+      success: true,
+      message: 'User created successfully',
+      data: userResponse
+    });
+  } catch (error) {
+    console.error('Create user error:', error);
+    
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already exists'
       });
-      if (existingUser) {
-        return res.status(400).json({ message: 'Email already in use' });
-      }
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// Get user by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
     }
 
+    res.json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// Update user
+router.put('/:id', async (req, res) => {
+  try {
+    const { firstName, lastName, phone, gender } = req.body;
+    
     const user = await User.findByIdAndUpdate(
-      req.user.id,
-      { $set: updates },
+      req.params.id,
+      { firstName, lastName, phone, gender },
       { new: true, runValidators: true }
     ).select('-password');
 
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
     res.json({
-      message: 'Profile updated successfully',
-      user: {
-        ...user.toObject(),
-        profileCompletion: user.getProfileCompletion()
-      }
+      success: true,
+      message: 'User updated successfully',
+      data: user
     });
   } catch (error) {
-    console.error('Update profile error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Update user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 });
 
-// @route   GET /api/users/search
-// @desc    Search users
-// @access  Private
-router.get('/search', auth, async (req, res) => {
+// Delete user
+router.delete('/:id', async (req, res) => {
   try {
-    const { q, role, skills, page = 1, limit = 10 } = req.query;
+    const user = await User.findByIdAndDelete(req.params.id);
     
-    const query = {};
-    
-    if (role) {
-      query.role = role;
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
     }
-    
-    if (q) {
-      query.$or = [
-        { firstName: { $regex: q, $options: 'i' } },
-        { lastName: { $regex: q, $options: 'i' } },
-        { skills: { $in: [new RegExp(q, 'i')] } }
-      ];
-    }
-    
-    if (skills) {
-      const skillsArray = skills.split(',');
-      query.skills = { $in: skillsArray };
-    }
-
-    const users = await User.find(query)
-      .select('-password')
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .sort({ lastActive: -1 });
-
-    const total = await User.countDocuments(query);
 
     res.json({
-      users: users.map(user => ({
-        ...user.toObject(),
-        profileCompletion: user.getProfileCompletion()
-      })),
-      pagination: {
-        current: page,
-        pages: Math.ceil(total / limit),
-        total
-      }
+      success: true,
+      message: 'User deleted successfully'
     });
   } catch (error) {
-    console.error('Search users error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Delete user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 });
 

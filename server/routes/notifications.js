@@ -9,6 +9,8 @@ const router = express.Router();
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
+    console.log('🔔 Getting notifications for user:', req.user.id);
+    
     const { page = 1, limit = 20, isRead, type } = req.query;
     
     const query = { recipient: req.user.id };
@@ -33,6 +35,8 @@ router.get('/', auth, async (req, res) => {
       isRead: false 
     });
 
+    console.log(`✅ Found ${notifications.length} notifications`);
+
     res.json({
       notifications,
       unreadCount,
@@ -43,8 +47,11 @@ router.get('/', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get notifications error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Get notifications error:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 
@@ -53,6 +60,8 @@ router.get('/', auth, async (req, res) => {
 // @access  Private
 router.put('/:id/read', auth, async (req, res) => {
   try {
+    console.log('👁️ Marking notification as read:', req.params.id);
+    
     const notification = await Notification.findById(req.params.id);
     if (!notification) {
       return res.status(404).json({ message: 'Notification not found' });
@@ -66,10 +75,15 @@ router.put('/:id/read', auth, async (req, res) => {
     notification.readAt = new Date();
     await notification.save();
 
+    console.log('✅ Notification marked as read');
+
     res.json({ message: 'Notification marked as read' });
   } catch (error) {
-    console.error('Mark notification read error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Mark notification read error:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 
@@ -78,15 +92,22 @@ router.put('/:id/read', auth, async (req, res) => {
 // @access  Private
 router.put('/mark-all-read', auth, async (req, res) => {
   try {
+    console.log('👁️ Marking all notifications as read for user:', req.user.id);
+    
     await Notification.updateMany(
       { recipient: req.user.id, isRead: false },
       { isRead: true, readAt: new Date() }
     );
 
+    console.log('✅ All notifications marked as read');
+
     res.json({ message: 'All notifications marked as read' });
   } catch (error) {
-    console.error('Mark all notifications read error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Mark all notifications read error:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 
@@ -95,6 +116,8 @@ router.put('/mark-all-read', auth, async (req, res) => {
 // @access  Private
 router.delete('/:id', auth, async (req, res) => {
   try {
+    console.log('🗑️ Deleting notification:', req.params.id);
+    
     const notification = await Notification.findById(req.params.id);
     if (!notification) {
       return res.status(404).json({ message: 'Notification not found' });
@@ -105,10 +128,16 @@ router.delete('/:id', auth, async (req, res) => {
     }
 
     await Notification.findByIdAndDelete(req.params.id);
+    
+    console.log('✅ Notification deleted successfully');
+    
     res.json({ message: 'Notification deleted successfully' });
   } catch (error) {
-    console.error('Delete notification error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Delete notification error:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 

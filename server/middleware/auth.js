@@ -1,8 +1,9 @@
-const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+// Simplified auth middleware (no JWT for now)
 const auth = async (req, res, next) => {
   try {
+    // For development, we'll use a simple token system
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
@@ -10,31 +11,28 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ message: 'No token, authorization denied' });
     }
 
-    console.log('🔍 Verifying token...');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    console.log('👤 Looking for user:', decoded.userId);
-    const user = await User.findById(decoded.userId).select('-password');
-    
-    if (!user) {
-      console.log('❌ User not found for token');
-      return res.status(401).json({ message: 'Token is not valid' });
-    }
+    // Extract user ID from simple token
+    const tokenParts = token.split('_');
+    if (tokenParts.length >= 3 && tokenParts[0] === 'simple' && tokenParts[1] === 'token') {
+      const userId = tokenParts[2];
+      
+      console.log('👤 Looking for user:', userId);
+      const user = await User.findById(userId).select('-password');
+      
+      if (!user) {
+        console.log('❌ User not found for token');
+        return res.status(401).json({ message: 'Token is not valid' });
+      }
 
-    console.log('✅ User authenticated:', user.email);
-    req.user = user;
-    next();
+      console.log('✅ User authenticated:', user.email);
+      req.user = user;
+      next();
+    } else {
+      console.log('❌ Invalid token format');
+      return res.status(401).json({ message: 'Invalid token format' });
+    }
   } catch (error) {
     console.error('❌ Auth middleware error:', error.message);
-    
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ message: 'Invalid token' });
-    }
-    
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ message: 'Token expired' });
-    }
-    
     res.status(401).json({ message: 'Token is not valid' });
   }
 };
