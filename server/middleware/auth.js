@@ -1,8 +1,9 @@
 const User = require('../models/User');
 
+// Simplified auth middleware (no JWT for now)
 const auth = async (req, res, next) => {
   try {
-    // Simplified auth for development
+    // For development, we'll use a simple token system
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {

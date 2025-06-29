@@ -1,47 +1,24 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const { createServer } = require('http');
-const { Server } = require('socket.io');
 require('dotenv').config();
 
 const app = express();
-const server = createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
-    methods: ["GET", "POST"]
-  }
-});
 
-// Security middleware
-app.use(helmet());
+// Middleware
 app.use(cors({
   origin: process.env.CLIENT_URL || "http://localhost:5173",
   credentials: true
 }));
 
-// Rate limiting (more lenient for development)
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000 // increased limit for development
-});
-app.use('/api/', limiter);
-
-// Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Make io available to routes
-app.set('io', io);
-
-// Database connection with simplified error handling
+// Database connection
 const connectDB = async () => {
   try {
     console.log('🔄 Connecting to MongoDB Atlas...');
-    console.log('📍 Connection string:', process.env.MONGODB_URI.replace(/\/\/.*@/, '//***:***@'));
+    console.log('📍 Database URL:', process.env.MONGODB_URI.replace(/\/\/.*@/, '//***:***@'));
     
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
@@ -51,6 +28,7 @@ const connectDB = async () => {
     console.log(`✅ MongoDB Connected Successfully!`);
     console.log(`📊 Database: ${conn.connection.name}`);
     console.log(`🌐 Host: ${conn.connection.host}`);
+    console.log(`📡 Ready State: ${conn.connection.readyState}`);
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);
     console.error('🔧 Please check:');
@@ -59,7 +37,7 @@ const connectDB = async () => {
     console.error('   3. IP whitelist in MongoDB Atlas');
     console.error('   4. Network firewall settings');
     
-    // Don't exit in development, keep trying
+    // Retry connection after 5 seconds
     console.log('🔄 Retrying connection in 5 seconds...');
     setTimeout(connectDB, 5000);
   }
@@ -81,24 +59,6 @@ mongoose.connection.on('disconnected', () => {
   console.log('🟡 Mongoose disconnected from MongoDB Atlas');
 });
 
-// Socket.io connection handling
-io.on('connection', (socket) => {
-  console.log('👤 User connected:', socket.id);
-  
-  socket.on('join-room', (roomId) => {
-    socket.join(roomId);
-    console.log(`🏠 User ${socket.id} joined room ${roomId}`);
-  });
-  
-  socket.on('send-message', (data) => {
-    socket.to(data.roomId).emit('receive-message', data);
-  });
-  
-  socket.on('disconnect', () => {
-    console.log('👋 User disconnected:', socket.id);
-  });
-});
-
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
@@ -106,8 +66,6 @@ app.use('/api/mentors', require('./routes/mentors'));
 app.use('/api/sessions', require('./routes/sessions'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/notifications', require('./routes/notifications'));
-app.use('/api/payments', require('./routes/payments'));
-app.use('/api/reviews', require('./routes/reviews'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -125,7 +83,8 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     database: {
       status: states[dbState],
-      name: mongoose.connection.name || 'Not connected'
+      name: mongoose.connection.name || 'Not connected',
+      host: mongoose.connection.host || 'Unknown'
     }
   });
 });
@@ -140,6 +99,16 @@ app.get('/api/test-db', async (req, res) => {
       2: 'Connecting',
       3: 'Disconnecting'
     };
+    
+    if (dbState !== 1) {
+      return res.status(500).json({
+        status: 'error',
+        message: 'Database not connected',
+        database: {
+          state: states[dbState]
+        }
+      });
+    }
     
     // Test database operation
     const collections = await mongoose.connection.db.listCollections().toArray();
@@ -175,6 +144,7 @@ app.get('/api/test', (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('🚨 Error:', err.message);
+  console.error('🚨 Stack:', err.stack);
   
   // MongoDB specific errors
   if (err.name === 'ValidationError') {
@@ -194,7 +164,7 @@ app.use((err, req, res, next) => {
   
   res.status(500).json({ 
     message: 'Something went wrong!',
-    error: err.message
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
   });
 });
 
@@ -213,13 +183,13 @@ app.use('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📱 Socket.io server ready for connections`);
   console.log(`🌐 API Base URL: http://localhost:${PORT}/api`);
   console.log(`🔍 Health Check: http://localhost:${PORT}/api/health`);
   console.log(`🧪 Test API: http://localhost:${PORT}/api/test`);
   console.log(`💾 Test DB: http://localhost:${PORT}/api/test-db`);
+  console.log(`📱 Frontend URL: ${process.env.CLIENT_URL}`);
 });
 
-module.exports = { app, io };
+module.exports = app;

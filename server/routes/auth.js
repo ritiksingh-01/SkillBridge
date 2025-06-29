@@ -6,7 +6,7 @@ const Mentor = require('../models/Mentor');
 const router = express.Router();
 
 // Simple token generation (for development)
-const generateToken = (userId) => {
+const generateSimpleToken = (userId) => {
   return `simple_token_${userId}_${Date.now()}`;
 };
 
@@ -21,7 +21,11 @@ router.post('/register', [
   body('role').isIn(['mentee', 'mentor']).withMessage('Role must be mentee or mentor')
 ], async (req, res) => {
   try {
-    console.log('📝 Registration attempt:', { email: req.body.email, role: req.body.role });
+    console.log('📝 Registration attempt:', { 
+      email: req.body.email, 
+      role: req.body.role,
+      timestamp: new Date().toISOString()
+    });
     
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -35,6 +39,7 @@ router.post('/register', [
     const { firstName, lastName, email, password, role, phone, gender } = req.body;
 
     // Check if user already exists
+    console.log('🔍 Checking if user exists:', email);
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       console.log('❌ User already exists:', email);
@@ -42,6 +47,7 @@ router.post('/register', [
     }
 
     // Create user
+    console.log('👤 Creating new user...');
     const user = new User({
       firstName,
       lastName,
@@ -53,23 +59,28 @@ router.post('/register', [
     });
 
     console.log('💾 Saving user to database...');
-    await user.save();
-    console.log('✅ User saved successfully:', user._id);
+    const savedUser = await user.save();
+    console.log('✅ User saved successfully:', savedUser._id);
 
     // Generate simple token
-    const token = generateToken(user._id);
+    const token = generateSimpleToken(savedUser._id);
+
+    // Return user data without password
+    const userResponse = {
+      id: savedUser._id,
+      firstName: savedUser.firstName,
+      lastName: savedUser.lastName,
+      email: savedUser.email,
+      role: savedUser.role,
+      profileCompletion: savedUser.getProfileCompletion()
+    };
+
+    console.log('🎉 Registration successful for:', email);
 
     res.status(201).json({
       message: 'User registered successfully',
       token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        profileCompletion: user.getProfileCompletion()
-      }
+      user: userResponse
     });
   } catch (error) {
     console.error('❌ Registration error:', error);
@@ -89,7 +100,7 @@ router.post('/register', [
     
     res.status(500).json({ 
       message: 'Server error during registration',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });
@@ -102,7 +113,10 @@ router.post('/login', [
   body('password').notEmpty().withMessage('Password is required')
 ], async (req, res) => {
   try {
-    console.log('🔐 Login attempt:', { email: req.body.email });
+    console.log('🔐 Login attempt:', { 
+      email: req.body.email,
+      timestamp: new Date().toISOString()
+    });
     
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -140,7 +154,7 @@ router.post('/login', [
     await user.save();
 
     // Generate simple token
-    const token = generateToken(user._id);
+    const token = generateSimpleToken(user._id);
 
     // Get mentor profile if user is a mentor
     let mentorProfile = null;
@@ -149,42 +163,47 @@ router.post('/login', [
       mentorProfile = await Mentor.findOne({ user: user._id });
     }
 
+    // Return user data without password
+    const userResponse = {
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+      profileImage: user.profileImage,
+      profileCompletion: user.getProfileCompletion(),
+      mentorProfile: mentorProfile ? {
+        id: mentorProfile._id,
+        isVerified: mentorProfile.isVerified,
+        applicationStatus: mentorProfile.applicationStatus
+      } : null
+    };
+
     console.log('✅ Login successful for:', email);
 
     res.json({
       message: 'Login successful',
       token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        profileImage: user.profileImage,
-        profileCompletion: user.getProfileCompletion(),
-        mentorProfile: mentorProfile ? {
-          id: mentorProfile._id,
-          isVerified: mentorProfile.isVerified,
-          applicationStatus: mentorProfile.applicationStatus
-        } : null
-      }
+      user: userResponse
     });
   } catch (error) {
     console.error('❌ Login error:', error);
     res.status(500).json({ 
       message: 'Server error during login',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });
 
 // @route   GET /api/auth/me
-// @desc    Get current user (simplified)
-// @access  Public (for now)
+// @desc    Get current user
+// @access  Public (simplified for now)
 router.get('/me', async (req, res) => {
   try {
-    // For now, just return a simple response
+    // For now, return a simple response
+    // Later we'll implement proper token verification
     res.json({
+      message: 'Auth endpoint working',
       user: {
         id: 'temp_user',
         firstName: 'Test',
@@ -198,7 +217,7 @@ router.get('/me', async (req, res) => {
     console.error('❌ Get user error:', error);
     res.status(500).json({ 
       message: 'Server error',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });
@@ -214,7 +233,7 @@ router.post('/logout', async (req, res) => {
     console.error('❌ Logout error:', error);
     res.status(500).json({ 
       message: 'Server error during logout',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });

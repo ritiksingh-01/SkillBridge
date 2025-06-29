@@ -18,6 +18,8 @@ router.post('/apply', auth, [
   body('bio').trim().notEmpty().withMessage('Bio is required')
 ], async (req, res) => {
   try {
+    console.log('📝 Mentor application from user:', req.user.id);
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -49,13 +51,18 @@ router.post('/apply', auth, [
     // Update user role to mentor
     await User.findByIdAndUpdate(req.user.id, { role: 'mentor' });
 
+    console.log('✅ Mentor application submitted successfully');
+
     res.status(201).json({
       message: 'Mentor application submitted successfully',
       mentor
     });
   } catch (error) {
-    console.error('Mentor application error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Mentor application error:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 
@@ -64,6 +71,8 @@ router.post('/apply', auth, [
 // @access  Public
 router.get('/', async (req, res) => {
   try {
+    console.log('🔍 Getting mentors with filters:', req.query);
+    
     const {
       page = 1,
       limit = 12,
@@ -131,6 +140,8 @@ router.get('/', async (req, res) => {
 
     const total = await Mentor.countDocuments(query);
 
+    console.log(`✅ Found ${mentors.length} mentors`);
+
     res.json({
       mentors,
       pagination: {
@@ -140,8 +151,11 @@ router.get('/', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get mentors error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Get mentors error:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 
@@ -150,6 +164,8 @@ router.get('/', async (req, res) => {
 // @access  Public
 router.get('/:id', async (req, res) => {
   try {
+    console.log('👤 Getting mentor by ID:', req.params.id);
+    
     const mentor = await Mentor.findById(req.params.id)
       .populate('user', 'firstName lastName profileImage location socialLinks');
 
@@ -157,10 +173,15 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Mentor not found' });
     }
 
+    console.log('✅ Mentor found:', mentor.user.firstName, mentor.user.lastName);
+
     res.json({ mentor });
   } catch (error) {
-    console.error('Get mentor error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Get mentor error:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 
@@ -169,6 +190,8 @@ router.get('/:id', async (req, res) => {
 // @access  Private
 router.put('/profile', auth, async (req, res) => {
   try {
+    console.log('✏️ Updating mentor profile for user:', req.user.id);
+    
     const mentor = await Mentor.findOne({ user: req.user.id });
     if (!mentor) {
       return res.status(404).json({ message: 'Mentor profile not found' });
@@ -192,13 +215,18 @@ router.put('/profile', auth, async (req, res) => {
       { new: true, runValidators: true }
     ).populate('user', 'firstName lastName profileImage');
 
+    console.log('✅ Mentor profile updated successfully');
+
     res.json({
       message: 'Mentor profile updated successfully',
       mentor: updatedMentor
     });
   } catch (error) {
-    console.error('Update mentor profile error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Update mentor profile error:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 
@@ -207,26 +235,33 @@ router.put('/profile', auth, async (req, res) => {
 // @access  Private
 router.get('/dashboard/stats', auth, async (req, res) => {
   try {
+    console.log('📊 Getting mentor dashboard stats for user:', req.user.id);
+    
     const mentor = await Mentor.findOne({ user: req.user.id });
     if (!mentor) {
       return res.status(404).json({ message: 'Mentor profile not found' });
     }
 
-    // Get additional stats from sessions, messages, etc.
-    // This would require importing Session and Message models
+    // For now, return the basic stats from mentor profile
+    // Later we can add more complex calculations from sessions, etc.
     const stats = {
       totalSessions: mentor.stats.totalSessions,
       totalMentees: mentor.stats.totalMentees,
       rating: mentor.rating,
       responseTime: mentor.stats.responseTime,
       completionRate: mentor.stats.completionRate,
-      // Add more calculated stats here
+      earnings: mentor.stats.totalSessions * (mentor.pricing.oneOnOneSession || 0)
     };
+
+    console.log('✅ Dashboard stats retrieved');
 
     res.json({ stats });
   } catch (error) {
-    console.error('Get mentor stats error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Get mentor stats error:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 
