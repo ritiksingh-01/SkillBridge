@@ -25,9 +25,15 @@ router.post('/register', [
   body('role').isIn(['mentee', 'mentor']).withMessage('Role must be mentee or mentor')
 ], async (req, res) => {
   try {
+    console.log('📝 Registration attempt:', { email: req.body.email, role: req.body.role });
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      console.log('❌ Validation errors:', errors.array());
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array() 
+      });
     }
 
     const { firstName, lastName, email, password, role, phone, gender } = req.body;
@@ -35,6 +41,7 @@ router.post('/register', [
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      console.log('❌ User already exists:', email);
       return res.status(400).json({ message: 'User already exists with this email' });
     }
 
@@ -49,7 +56,9 @@ router.post('/register', [
       gender
     });
 
+    console.log('💾 Saving user to database...');
     await user.save();
+    console.log('✅ User saved successfully:', user._id);
 
     // Generate token
     const token = generateToken(user._id);
@@ -67,8 +76,25 @@ router.post('/register', [
       }
     });
   } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ message: 'Server error during registration' });
+    console.error('❌ Registration error:', error);
+    
+    // Handle specific MongoDB errors
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
+    
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors 
+      });
+    }
+    
+    res.status(500).json({ 
+      message: 'Server error during registration',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 
@@ -80,24 +106,38 @@ router.post('/login', [
   body('password').notEmpty().withMessage('Password is required')
 ], async (req, res) => {
   try {
+    console.log('🔐 Login attempt:', { email: req.body.email });
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      console.log('❌ Validation errors:', errors.array());
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array() 
+      });
     }
 
     const { email, password } = req.body;
 
     // Find user
+    console.log('🔍 Looking for user in database...');
     const user = await User.findOne({ email });
     if (!user) {
+      console.log('❌ User not found:', email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    console.log('✅ User found:', user._id);
+
     // Check password
+    console.log('🔒 Verifying password...');
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      console.log('❌ Password mismatch for user:', email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
+
+    console.log('✅ Password verified');
 
     // Update last active
     user.lastActive = new Date();
@@ -109,8 +149,11 @@ router.post('/login', [
     // Get mentor profile if user is a mentor
     let mentorProfile = null;
     if (user.role === 'mentor') {
+      console.log('👨‍🏫 Fetching mentor profile...');
       mentorProfile = await Mentor.findOne({ user: user._id });
     }
+
+    console.log('✅ Login successful for:', email);
 
     res.json({
       message: 'Login successful',
@@ -131,8 +174,11 @@ router.post('/login', [
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error during login' });
+    console.error('❌ Login error:', error);
+    res.status(500).json({ 
+      message: 'Server error during login',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 
@@ -141,8 +187,11 @@ router.post('/login', [
 // @access  Private
 router.get('/me', auth, async (req, res) => {
   try {
+    console.log('👤 Fetching user profile for:', req.user.id);
+    
     const user = await User.findById(req.user.id).select('-password');
     if (!user) {
+      console.log('❌ User not found:', req.user.id);
       return res.status(404).json({ message: 'User not found' });
     }
 
@@ -166,8 +215,11 @@ router.get('/me', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get user error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Get user error:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 
@@ -179,10 +231,14 @@ router.post('/logout', auth, async (req, res) => {
     // Update last active time
     await User.findByIdAndUpdate(req.user.id, { lastActive: new Date() });
     
+    console.log('👋 User logged out:', req.user.id);
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
-    console.error('Logout error:', error);
-    res.status(500).json({ message: 'Server error during logout' });
+    console.error('❌ Logout error:', error);
+    res.status(500).json({ 
+      message: 'Server error during logout',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 
