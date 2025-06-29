@@ -1,15 +1,48 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
+const { auth } = require('../middleware/auth');
 const router = express.Router();
 
-// Get all users
-router.get('/', async (req, res) => {
+// @route   GET /api/users
+// @desc    Get all users (admin only)
+// @access  Private
+router.get('/', auth, async (req, res) => {
   try {
-    const users = await User.find().select('-password');
+    const { page = 1, limit = 10, role, search } = req.query;
+    
+    let query = {};
+    
+    if (role) {
+      query.role = role;
+    }
+    
+    if (search) {
+      query.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const users = await User.find(query)
+      .select('-password')
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .sort({ createdAt: -1 });
+
+    const total = await User.countDocuments(query);
+
     res.json({
       success: true,
       count: users.length,
-      data: users
+      total,
+      data: users,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total
+      }
     });
   } catch (error) {
     console.error('Get users error:', error);
@@ -20,52 +53,26 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Create a new user
-router.post('/', async (req, res) => {
+// @route   GET /api/users/profile
+// @desc    Get current user profile
+// @access  Private
+router.get('/profile', auth, async (req, res) => {
   try {
-    const { firstName, lastName, email, password, role, phone, gender } = req.body;
-
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
+    const user = await User.findById(req.user.id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({
         success: false,
-        message: 'User already exists with this email'
+        message: 'User not found'
       });
     }
 
-    // Create new user
-    const user = new User({
-      firstName,
-      lastName,
-      email,
-      password,
-      role: role || 'mentee',
-      phone: phone || '',
-      gender: gender || ''
-    });
-
-    const savedUser = await user.save();
-
-    // Return user without password
-    const userResponse = savedUser.toObject();
-    delete userResponse.password;
-
-    res.status(201).json({
+    res.json({
       success: true,
-      message: 'User created successfully',
-      data: userResponse
+      data: user
     });
   } catch (error) {
-    console.error('Create user error:', error);
-    
-    if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email already exists'
-      });
-    }
-    
+    console.error('Get profile error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -73,8 +80,68 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Get user by ID
-router.get('/:id', async (req, res) => {
+// @route   PUT /api/users/profile
+// @desc    Update user profile
+// @access  Private
+router.put('/profile', [
+  auth,
+  body('firstName').optional().trim().notEmpty().withMessage('First name cannot be empty'),
+  body('lastName').optional().trim().notEmpty().withMessage('Last name cannot be empty'),
+  body('phone').optional().trim(),
+  body('gender').optional().isIn(['Male', 'Female', 'Other']).withMessage('Invalid gender')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { firstName, lastName, phone, gender, profileImage } = req.body;
+    
+    const updateFields = {};
+    if (firstName) updateFields.firstName = firstName.trim();
+    if (lastName) updateFields.lastName = lastName.trim();
+    if (phone !== undefined) updateFields.phone = phone.trim();
+    if (gender) updateFields.gender = gender;
+    if (profileImage) updateFields.profileImage = profileImage;
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      updateFields,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    console.log('✅ Profile updated for user:', user.email);
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: user
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// @route   GET /api/users/:id
+// @desc    Get user by ID
+// @access  Private
+router.get('/:id', auth, async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
     
@@ -98,17 +165,13 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Update user
-router.put('/:id', async (req, res) => {
+// @route   DELETE /api/users/:id
+// @desc    Delete user (admin only)
+// @access  Private
+router.delete('/:id', auth, async (req, res) => {
   try {
-    const { firstName, lastName, phone, gender } = req.body;
+    const user = await User.findById(req.params.id);
     
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { firstName, lastName, phone, gender },
-      { new: true, runValidators: true }
-    ).select('-password');
-
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -116,13 +179,18 @@ router.put('/:id', async (req, res) => {
       });
     }
 
+    // Soft delete - just deactivate the user
+    user.isActive = false;
+    await user.save();
+
+    console.log('✅ User deactivated:', user.email);
+
     res.json({
       success: true,
-      message: 'User updated successfully',
-      data: user
+      message: 'User deactivated successfully'
     });
   } catch (error) {
-    console.error('Update user error:', error);
+    console.error('Delete user error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -130,24 +198,45 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Delete user
-router.delete('/:id', async (req, res) => {
+// @route   GET /api/users/search
+// @desc    Search users
+// @access  Private
+router.get('/search', auth, async (req, res) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
+    const { q, role, limit = 10 } = req.query;
     
-    if (!user) {
-      return res.status(404).json({
+    if (!q) {
+      return res.status(400).json({
         success: false,
-        message: 'User not found'
+        message: 'Search query is required'
       });
     }
 
+    let query = {
+      $or: [
+        { firstName: { $regex: q, $options: 'i' } },
+        { lastName: { $regex: q, $options: 'i' } },
+        { email: { $regex: q, $options: 'i' } }
+      ],
+      isActive: true
+    };
+
+    if (role) {
+      query.role = role;
+    }
+
+    const users = await User.find(query)
+      .select('-password')
+      .limit(parseInt(limit))
+      .sort({ firstName: 1 });
+
     res.json({
       success: true,
-      message: 'User deleted successfully'
+      count: users.length,
+      data: users
     });
   } catch (error) {
-    console.error('Delete user error:', error);
+    console.error('Search users error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
