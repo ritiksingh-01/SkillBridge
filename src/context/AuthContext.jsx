@@ -25,12 +25,23 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (token) {
         const response = await authAPI.getMe();
-        setUser(response.data.user);
-        setIsAuthenticated(true);
+        if (response.data.success) {
+          setUser(response.data.user);
+          setIsAuthenticated(true);
+        } else {
+          // Invalid token
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+          setIsAuthenticated(false);
+        }
       }
     } catch (error) {
+      console.error('Auth check failed:', error);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      setUser(null);
+      setIsAuthenticated(false);
     } finally {
       setLoading(false);
     }
@@ -39,16 +50,25 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       const response = await authAPI.login(credentials);
-      const { token, user } = response.data;
       
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      
-      setUser(user);
-      setIsAuthenticated(true);
-      
-      return { success: true, user };
+      if (response.data.success) {
+        const { token, user } = response.data;
+        
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        setUser(user);
+        setIsAuthenticated(true);
+        
+        return { success: true, user };
+      } else {
+        return { 
+          success: false, 
+          error: response.data.message || 'Login failed' 
+        };
+      }
     } catch (error) {
+      console.error('Login error:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || 'Login failed' 
@@ -59,16 +79,25 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const response = await authAPI.register(userData);
-      const { token, user } = response.data;
       
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      
-      setUser(user);
-      setIsAuthenticated(true);
-      
-      return { success: true, user };
+      if (response.data.success) {
+        const { token, user } = response.data;
+        
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        setUser(user);
+        setIsAuthenticated(true);
+        
+        return { success: true, user };
+      } else {
+        return { 
+          success: false, 
+          error: response.data.message || 'Registration failed' 
+        };
+      }
     } catch (error) {
+      console.error('Registration error:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || 'Registration failed' 
@@ -90,8 +119,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateUser = (userData) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(prev => ({ ...prev, ...userData }));
+    localStorage.setItem('user', JSON.stringify({ ...user, ...userData }));
   };
 
   const value = {

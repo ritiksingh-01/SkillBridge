@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHome, faChalkboardTeacher, faEnvelope, faBell, faUser , faCog, faQuestionCircle, faSignOutAlt, faBars, faTimes, faChevronDown, faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faHome, faChalkboardTeacher, faEnvelope, faBell, faUser, faCog, faQuestionCircle, faSignOutAlt, faBars, faTimes, faChevronDown, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-const Header = ({ userProfilePic }) => {
+const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-
+  const { user, logout, isAuthenticated } = useAuth();
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(prev => !prev);
@@ -28,20 +29,51 @@ const Header = ({ userProfilePic }) => {
     setProfileMenuOpen(false);
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+      navigate('/');
+    }
+  };
+
   const isActive = (path) => {
     return location.pathname === path;
   };
 
   // Profile picture URL fallback logic
-  const profilePicUrl = !profileImageError && userProfilePic ? userProfilePic : 'https://images.unsplash.com/photo-1517841905240-472988babdf9';
+  const profilePicUrl = !profileImageError && user?.profileImage ? user.profileImage : 
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.firstName || 'User')}&background=3B82F6&color=fff`;
+
+  const getProfilePath = () => {
+    if (user?.role === 'mentor') {
+      return '/mentor-profile';
+    }
+    return '/menteeProfile';
+  };
+
+  const getDashboardPath = () => {
+    if (user?.role === 'mentor') {
+      return '/mentor-dashboard';
+    }
+    return '/mentee-dashboard';
+  };
+
+  if (!isAuthenticated) {
+    return null; // Don't show header if not authenticated
+  }
 
   return (
     <header className="w-full h-20 px-4 md:px-8 lg:px-16 xl:px-24 bg-white shadow-sm flex justify-between items-center fixed top-0 z-50">
       <div className="flex items-center gap-2">
-        <div className="w-10 h-10 relative overflow-hidden rounded-md bg-gradient-to-r from-blue-600 to-indigo-700 flex items-center justify-center">
+        <div className="w-10 h-10 relative overflow-hidden rounded-md bg-gradient-to-r from-blue-600 to-indigo-700 flex items-center justify-center cursor-pointer" onClick={() => handleNavigation('/')}>
           <div className="w-6 h-6 absolute bg-white rotate-45 transform translate-x-3"></div>
         </div>
-        <div className="text-gray-800 text-xl font-bold">Skill<span className="text-blue-600">Bridge</span></div>
+        <div className="text-gray-800 text-xl font-bold cursor-pointer" onClick={() => handleNavigation('/')}>
+          Skill<span className="text-blue-600">Bridge</span>
+        </div>
       </div>
 
       <div className="md:hidden">
@@ -57,19 +89,19 @@ const Header = ({ userProfilePic }) => {
       <nav className="hidden md:flex items-center space-x-2">
         <NavItem 
           icon={<FontAwesomeIcon icon={faHome} />} 
-          text="Home" 
-          active={isActive('/')} 
-          onClick={() => handleNavigation('/')} 
+          text="Dashboard" 
+          active={isActive(getDashboardPath())} 
+          onClick={() => handleNavigation(getDashboardPath())} 
         />
         <NavItem 
           icon={<FontAwesomeIcon icon={faChalkboardTeacher} />} 
-          text="Mentor" 
+          text="Mentors" 
           active={isActive('/findMentorPage')} 
           onClick={() => handleNavigation('/findMentorPage')} 
         />
         <NavItem 
           icon={<FontAwesomeIcon icon={faEnvelope} />} 
-          text="Messaging" 
+          text="Messages" 
           active={isActive('/message')} 
           onClick={() => handleNavigation('/message')} 
         />
@@ -83,22 +115,18 @@ const Header = ({ userProfilePic }) => {
           <div 
             className="flex flex-col items-center cursor-pointer w-12" 
             onClick={toggleProfileMenu}
-            aria-label="User  profile menu"
+            aria-label="User profile menu"
           >
             <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden shadow-sm border border-gray-300">
-              {profilePicUrl && !profileImageError ? (
-                <img 
-                  src={profilePicUrl} 
-                  alt="Profile" 
-                  className="w-full h-full object-cover"
-                  onError={() => setProfileImageError(true)}
-                />
-              ) : (
-                <FontAwesomeIcon icon={faUser } className="text-gray-500" />
-              )}
+              <img 
+                src={profilePicUrl} 
+                alt="Profile" 
+                className="w-full h-full object-cover"
+                onError={() => setProfileImageError(true)}
+              />
             </div>
             <div className="flex items-center mt-1 select-none">
-              <span className="text-xs font-medium text-gray-500">ME</span>
+              <span className="text-xs font-medium text-gray-500">{user?.firstName?.toUpperCase() || 'USER'}</span>
               <FontAwesomeIcon icon={faChevronDown} className="text-gray-500 ml-1" />
             </div>
           </div>
@@ -106,13 +134,14 @@ const Header = ({ userProfilePic }) => {
           {profileMenuOpen && (
             <div className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
               <div className="px-4 py-3 border-b border-gray-100">
-                <div className="font-medium text-gray-800">John Doe</div>
-                <div className="text-sm text-gray-500">john.doe@example.com</div>
+                <div className="font-medium text-gray-800">{user?.firstName} {user?.lastName}</div>
+                <div className="text-sm text-gray-500">{user?.email}</div>
+                <div className="text-xs text-blue-600 capitalize">{user?.role}</div>
               </div>
               <ProfileMenuItem 
-                icon={<FontAwesomeIcon icon={faUser } />} 
+                icon={<FontAwesomeIcon icon={faUser} />} 
                 text="View Profile" 
-                onClick={() => handleNavigation('/menteeProfile')} 
+                onClick={() => handleNavigation(getProfilePath())} 
               />
               <ProfileMenuItem 
                 icon={<FontAwesomeIcon icon={faCog} />} 
@@ -128,7 +157,7 @@ const Header = ({ userProfilePic }) => {
               <ProfileMenuItem 
                 icon={<FontAwesomeIcon icon={faSignOutAlt} />} 
                 text="Logout" 
-                onClick={() => handleNavigation('/logout')} 
+                onClick={handleLogout} 
               />
             </div>
           )}
@@ -154,21 +183,21 @@ const Header = ({ userProfilePic }) => {
           <div className="flex flex-col py-2">
             <MobileNavItem 
               icon={<FontAwesomeIcon icon={faHome} />} 
-              text="Home" 
-              active={isActive('/')} 
-              onClick={() => handleNavigation('/')} 
+              text="Dashboard" 
+              active={isActive(getDashboardPath())} 
+              onClick={() => handleNavigation(getDashboardPath())} 
             />
             <MobileNavItem 
               icon={<FontAwesomeIcon icon={faChalkboardTeacher} />} 
-              text="Mentor" 
+              text="Mentors" 
               active={isActive('/findMentorPage')} 
               onClick={() => handleNavigation('/findMentorPage')} 
             />
             <MobileNavItem 
               icon={<FontAwesomeIcon icon={faEnvelope} />} 
-              text="Messaging" 
-              active={isActive('/messages')} 
-              onClick={() => handleNavigation('/messages')} 
+              text="Messages" 
+              active={isActive('/message')} 
+              onClick={() => handleNavigation('/message')} 
             />
             <MobileNavItem 
               icon={<FontAwesomeIcon icon={faBell} />} 
@@ -178,10 +207,10 @@ const Header = ({ userProfilePic }) => {
             />
             <div className="border-t border-gray-100 my-2"></div>
             <MobileNavItem 
-              icon={<FontAwesomeIcon icon={faUser } />} 
+              icon={<FontAwesomeIcon icon={faUser} />} 
               text="View Profile" 
-              active={isActive('/profile')} 
-              onClick={() => handleNavigation('/profile')} 
+              active={isActive(getProfilePath())} 
+              onClick={() => handleNavigation(getProfilePath())} 
             />
             <MobileNavItem 
               icon={<FontAwesomeIcon icon={faCog} />} 
@@ -199,7 +228,7 @@ const Header = ({ userProfilePic }) => {
               icon={<FontAwesomeIcon icon={faSignOutAlt} />} 
               text="Logout" 
               active={false} 
-              onClick={() => handleNavigation('/logout')} 
+              onClick={handleLogout} 
             />
           </div>
         </div>
@@ -220,6 +249,7 @@ const NavItem = ({ icon, text, active, onClick }) => {
     </div>
   );
 };
+
 const MobileNavItem = ({ icon, text, active, onClick }) => {
   return (
     <div className={`flex items-center gap-3 px-6 py-3 ${active ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'} cursor-pointer`} onClick={onClick}>
