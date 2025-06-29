@@ -1,16 +1,28 @@
 const express = require('express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const auth = require('../middleware/auth');
 const router = express.Router();
 
-// Simple token generation (for development - no JWT for now)
+// Generate JWT token
+const generateToken = (userId) => {
+  return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE || '7d'
+  });
+};
+
+// Generate simple token (fallback for development)
 const generateSimpleToken = (userId) => {
   return `simple_token_${userId}_${Date.now()}`;
 };
 
-// Register route
+// @route   POST /api/auth/register
+// @desc    Register user
+// @access  Public
 router.post('/register', async (req, res) => {
   try {
-    console.log('📝 Registration attempt:', req.body);
+    console.log('📝 Registration attempt:', req.body.email);
     
     const { firstName, lastName, email, password, role, phone, gender } = req.body;
 
@@ -22,8 +34,15 @@ router.post('/register', async (req, res) => {
       });
     }
 
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters'
+      });
+    }
+
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -31,12 +50,16 @@ router.post('/register', async (req, res) => {
       });
     }
 
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     // Create new user
     const user = new User({
-      firstName,
-      lastName,
-      email,
-      password, // In production, this should be hashed
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.toLowerCase().trim(),
+      password: hashedPassword,
       role: role || 'mentee',
       phone: phone || '',
       gender: gender || ''
@@ -44,8 +67,8 @@ router.post('/register', async (req, res) => {
 
     const savedUser = await user.save();
 
-    // Generate simple token
-    const token = generateSimpleToken(savedUser._id);
+    // Generate token
+    const token = generateToken(savedUser._id);
 
     // Return user without password
     const userResponse = {
@@ -55,7 +78,8 @@ router.post('/register', async (req, res) => {
       email: savedUser.email,
       role: savedUser.role,
       phone: savedUser.phone,
-      gender: savedUser.gender
+      gender: savedUser.gender,
+      createdAt: savedUser.createdAt
     };
 
     console.log('✅ User registered successfully:', userResponse.email);
@@ -83,7 +107,9 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login route
+// @route   POST /api/auth/login
+// @desc    Login user
+// @access  Public
 router.post('/login', async (req, res) => {
   try {
     console.log('🔐 Login attempt:', req.body.email);
@@ -99,7 +125,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Find user
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       return res.status(400).json({
         success: false,
@@ -107,16 +133,17 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Check password (in production, use bcrypt.compare)
-    if (user.password !== password) {
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
       return res.status(400).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
 
-    // Generate simple token
-    const token = generateSimpleToken(user._id);
+    // Generate token
+    const token = generateToken(user._id);
 
     // Return user without password
     const userResponse = {
@@ -126,7 +153,8 @@ router.post('/login', async (req, res) => {
       email: user.email,
       role: user.role,
       phone: user.phone,
-      gender: user.gender
+      gender: user.gender,
+      createdAt: user.createdAt
     };
 
     console.log('✅ User logged in successfully:', userResponse.email);
@@ -146,20 +174,25 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Get current user (for token validation)
-router.get('/me', async (req, res) => {
+// @route   GET /api/auth/me
+// @desc    Get current user
+// @access  Private
+router.get('/me', auth, async (req, res) => {
   try {
-    // For now, return a simple response
+    const userResponse = {
+      id: req.user._id,
+      firstName: req.user.firstName,
+      lastName: req.user.lastName,
+      email: req.user.email,
+      role: req.user.role,
+      phone: req.user.phone,
+      gender: req.user.gender,
+      createdAt: req.user.createdAt
+    };
+
     res.json({
       success: true,
-      message: 'Auth endpoint working',
-      user: {
-        id: 'temp_user',
-        firstName: 'Test',
-        lastName: 'User',
-        email: 'test@example.com',
-        role: 'mentee'
-      }
+      user: userResponse
     });
   } catch (error) {
     console.error('❌ Get user error:', error);
@@ -170,10 +203,12 @@ router.get('/me', async (req, res) => {
   }
 });
 
-// Logout route
-router.post('/logout', async (req, res) => {
+// @route   POST /api/auth/logout
+// @desc    Logout user
+// @access  Private
+router.post('/logout', auth, async (req, res) => {
   try {
-    console.log('👋 User logged out');
+    console.log('👋 User logged out:', req.user.email);
     res.json({
       success: true,
       message: 'Logged out successfully'
