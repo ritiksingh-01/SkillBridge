@@ -1,17 +1,13 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const Mentor = require('../models/Mentor');
-const auth = require('../middleware/auth');
 
 const router = express.Router();
 
-// Generate JWT token
+// Simple token generation (for development)
 const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE || '7d'
-  });
+  return `simple_token_${userId}_${Date.now()}`;
 };
 
 // @route   POST /api/auth/register
@@ -52,15 +48,15 @@ router.post('/register', [
       email,
       password,
       role,
-      phone,
-      gender
+      phone: phone || '',
+      gender: gender || ''
     });
 
     console.log('💾 Saving user to database...');
     await user.save();
     console.log('✅ User saved successfully:', user._id);
 
-    // Generate token
+    // Generate simple token
     const token = generateToken(user._id);
 
     res.status(201).json({
@@ -93,7 +89,7 @@ router.post('/register', [
     
     res.status(500).json({ 
       message: 'Server error during registration',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      error: error.message
     });
   }
 });
@@ -143,7 +139,7 @@ router.post('/login', [
     user.lastActive = new Date();
     await user.save();
 
-    // Generate token
+    // Generate simple token
     const token = generateToken(user._id);
 
     // Get mentor profile if user is a mentor
@@ -177,67 +173,48 @@ router.post('/login', [
     console.error('❌ Login error:', error);
     res.status(500).json({ 
       message: 'Server error during login',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      error: error.message
     });
   }
 });
 
 // @route   GET /api/auth/me
-// @desc    Get current user
-// @access  Private
-router.get('/me', auth, async (req, res) => {
+// @desc    Get current user (simplified)
+// @access  Public (for now)
+router.get('/me', async (req, res) => {
   try {
-    console.log('👤 Fetching user profile for:', req.user.id);
-    
-    const user = await User.findById(req.user.id).select('-password');
-    if (!user) {
-      console.log('❌ User not found:', req.user.id);
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Get mentor profile if user is a mentor
-    let mentorProfile = null;
-    if (user.role === 'mentor') {
-      mentorProfile = await Mentor.findOne({ user: user._id });
-    }
-
+    // For now, just return a simple response
     res.json({
       user: {
-        ...user.toObject(),
-        profileCompletion: user.getProfileCompletion(),
-        mentorProfile: mentorProfile ? {
-          id: mentorProfile._id,
-          isVerified: mentorProfile.isVerified,
-          applicationStatus: mentorProfile.applicationStatus,
-          rating: mentorProfile.rating,
-          stats: mentorProfile.stats
-        } : null
+        id: 'temp_user',
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'test@example.com',
+        role: 'mentee',
+        profileCompletion: 50
       }
     });
   } catch (error) {
     console.error('❌ Get user error:', error);
     res.status(500).json({ 
       message: 'Server error',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      error: error.message
     });
   }
 });
 
 // @route   POST /api/auth/logout
 // @desc    Logout user
-// @access  Private
-router.post('/logout', auth, async (req, res) => {
+// @access  Public
+router.post('/logout', async (req, res) => {
   try {
-    // Update last active time
-    await User.findByIdAndUpdate(req.user.id, { lastActive: new Date() });
-    
-    console.log('👋 User logged out:', req.user.id);
+    console.log('👋 User logged out');
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('❌ Logout error:', error);
     res.status(500).json({ 
       message: 'Server error during logout',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      error: error.message
     });
   }
 });

@@ -23,10 +23,10 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
+// Rate limiting (more lenient for development)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 1000 // increased limit for development
 });
 app.use('/api/', limiter);
 
@@ -37,35 +37,31 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Make io available to routes
 app.set('io', io);
 
-// Database connection with better error handling
+// Database connection with simplified error handling
 const connectDB = async () => {
   try {
     console.log('🔄 Connecting to MongoDB Atlas...');
+    console.log('📍 Connection string:', process.env.MONGODB_URI.replace(/\/\/.*@/, '//***:***@'));
     
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-      socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
-      bufferMaxEntries: 0, // Disable mongoose buffering
-      bufferCommands: false, // Disable mongoose buffering
     });
 
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    console.log(`✅ MongoDB Connected Successfully!`);
     console.log(`📊 Database: ${conn.connection.name}`);
+    console.log(`🌐 Host: ${conn.connection.host}`);
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);
+    console.error('🔧 Please check:');
+    console.error('   1. Your internet connection');
+    console.error('   2. MongoDB Atlas credentials');
+    console.error('   3. IP whitelist in MongoDB Atlas');
+    console.error('   4. Network firewall settings');
     
-    // Log specific connection issues
-    if (error.message.includes('authentication failed')) {
-      console.error('🔐 Authentication failed - check your username and password');
-    } else if (error.message.includes('network')) {
-      console.error('🌐 Network error - check your internet connection');
-    } else if (error.message.includes('timeout')) {
-      console.error('⏰ Connection timeout - check your connection string');
-    }
-    
-    process.exit(1);
+    // Don't exit in development, keep trying
+    console.log('🔄 Retrying connection in 5 seconds...');
+    setTimeout(connectDB, 5000);
   }
 };
 
@@ -78,23 +74,11 @@ mongoose.connection.on('connected', () => {
 });
 
 mongoose.connection.on('error', (err) => {
-  console.error('🔴 Mongoose connection error:', err);
+  console.error('🔴 Mongoose connection error:', err.message);
 });
 
 mongoose.connection.on('disconnected', () => {
   console.log('🟡 Mongoose disconnected from MongoDB Atlas');
-});
-
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  try {
-    await mongoose.connection.close();
-    console.log('🔄 MongoDB connection closed through app termination');
-    process.exit(0);
-  } catch (error) {
-    console.error('❌ Error during graceful shutdown:', error);
-    process.exit(1);
-  }
 });
 
 // Socket.io connection handling
@@ -127,11 +111,22 @@ app.use('/api/reviews', require('./routes/reviews'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  const dbState = mongoose.connection.readyState;
+  const states = {
+    0: 'Disconnected',
+    1: 'Connected',
+    2: 'Connecting',
+    3: 'Disconnecting'
+  };
+
   res.status(200).json({ 
     status: 'OK', 
     message: 'SkillBridge API is running',
     timestamp: new Date().toISOString(),
-    database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
+    database: {
+      status: states[dbState],
+      name: mongoose.connection.name || 'Not connected'
+    }
   });
 });
 
@@ -146,26 +141,40 @@ app.get('/api/test-db', async (req, res) => {
       3: 'Disconnecting'
     };
     
+    // Test database operation
+    const collections = await mongoose.connection.db.listCollections().toArray();
+    
     res.json({
       status: 'success',
+      message: 'Database connection test successful',
       database: {
         state: states[dbState],
         host: mongoose.connection.host,
         name: mongoose.connection.name,
-        collections: Object.keys(mongoose.connection.collections)
+        collections: collections.map(c => c.name)
       }
     });
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      message: error.message
+      message: 'Database connection test failed',
+      error: error.message
     });
   }
 });
 
+// Simple test route
+app.get('/api/test', (req, res) => {
+  res.json({
+    status: 'success',
+    message: 'API is working!',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('🚨 Error:', err.stack);
+  console.error('🚨 Error:', err.message);
   
   // MongoDB specific errors
   if (err.name === 'ValidationError') {
@@ -185,13 +194,22 @@ app.use((err, req, res, next) => {
   
   res.status(500).json({ 
     message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    error: err.message
   });
 });
 
 // 404 handler
 app.use('*', (req, res) => {
-  res.status(404).json({ message: `Route ${req.originalUrl} not found` });
+  res.status(404).json({ 
+    message: `Route ${req.originalUrl} not found`,
+    availableRoutes: [
+      'GET /api/health',
+      'GET /api/test',
+      'GET /api/test-db',
+      'POST /api/auth/register',
+      'POST /api/auth/login'
+    ]
+  });
 });
 
 const PORT = process.env.PORT || 5000;
@@ -200,6 +218,8 @@ server.listen(PORT, () => {
   console.log(`📱 Socket.io server ready for connections`);
   console.log(`🌐 API Base URL: http://localhost:${PORT}/api`);
   console.log(`🔍 Health Check: http://localhost:${PORT}/api/health`);
+  console.log(`🧪 Test API: http://localhost:${PORT}/api/test`);
+  console.log(`💾 Test DB: http://localhost:${PORT}/api/test-db`);
 });
 
 module.exports = { app, io };
