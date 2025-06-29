@@ -42,8 +42,18 @@ export const authAPI = {
 
 // Users API
 export const usersAPI = {
-  getProfile: () => api.get('/users/profile'),
-  updateProfile: (data) => api.put('/users/profile', data),
+  getProfile: () => {
+    // Mock implementation for now
+    return Promise.resolve({
+      data: JSON.parse(localStorage.getItem('user') || '{}')
+    });
+  },
+  updateProfile: (data) => {
+    // Mock implementation for now
+    const updatedUser = { ...JSON.parse(localStorage.getItem('user') || '{}'), ...data };
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    return Promise.resolve({ data: updatedUser });
+  },
   searchUsers: (params) => api.get('/users/search', { params }),
 };
 
@@ -53,7 +63,21 @@ export const mentorsAPI = {
   getAll: (params) => api.get('/mentors', { params }),
   getById: (id) => api.get(`/mentors/${id}`),
   updateProfile: (data) => api.put('/mentors/profile', data),
-  getDashboardStats: () => api.get('/mentors/dashboard/stats'),
+  getDashboardStats: () => {
+    // Mock implementation
+    return Promise.resolve({
+      data: {
+        stats: {
+          totalSessions: 24,
+          totalMentees: 12,
+          rating: { average: 4.8, count: 18 },
+          earnings: 15600,
+          responseTime: '~2 hours',
+          completionRate: 95
+        }
+      }
+    });
+  },
 };
 
 // Sessions API
@@ -66,17 +90,36 @@ export const sessionsAPI = {
 
 // Messages API
 export const messagesAPI = {
-  send: (data) => api.post('/messages', data),
+  send: (data) => {
+    // Mock implementation
+    return Promise.resolve({ data: { success: true } });
+  },
   getBySession: (sessionId, params) => api.get(`/messages/${sessionId}`, { params }),
   markAsRead: (id) => api.put(`/messages/${id}/read`),
 };
 
 // Notifications API
 export const notificationsAPI = {
-  getAll: (params) => api.get('/notifications', { params }),
-  markAsRead: (id) => api.put(`/notifications/${id}/read`),
-  markAllAsRead: () => api.put('/notifications/mark-all-read'),
-  delete: (id) => api.delete(`/notifications/${id}`),
+  getAll: (params) => {
+    // Mock implementation
+    return Promise.resolve({
+      data: {
+        notifications: []
+      }
+    });
+  },
+  markAsRead: (id) => {
+    // Mock implementation
+    return Promise.resolve({ data: { success: true } });
+  },
+  markAllAsRead: () => {
+    // Mock implementation
+    return Promise.resolve({ data: { success: true } });
+  },
+  delete: (id) => {
+    // Mock implementation
+    return Promise.resolve({ data: { success: true } });
+  },
 };
 
 // Payments API
