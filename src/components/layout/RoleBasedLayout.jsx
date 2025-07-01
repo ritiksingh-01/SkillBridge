@@ -4,7 +4,11 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 
 const RoleBasedLayout = ({ children }) => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return children;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

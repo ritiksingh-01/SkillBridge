@@ -5,11 +5,9 @@ import {
   User, 
   MessageSquare, 
   Bell, 
-  Users, 
   Search,
   Settings, 
-  HelpCircle,
-  UserPlus
+  HelpCircle
 } from 'lucide-react';
 
 const Sidebar = ({ userRole }) => {
@@ -21,7 +19,6 @@ const Sidebar = ({ userRole }) => {
     { icon: User, label: 'Profile', path: '/profile' },
     { icon: MessageSquare, label: 'Messages', path: '/messages' },
     { icon: Bell, label: 'Notifications', path: '/notifications' },
-    { icon: UserPlus, label: 'Find Mentees', path: '/find-mentees' },
     { icon: Settings, label: 'Settings', path: '/settings' },
     { icon: HelpCircle, label: 'Help', path: '/help' }
   ];
@@ -29,8 +26,8 @@ const Sidebar = ({ userRole }) => {
   const menteeNavItems = [
     { icon: User, label: 'Profile', path: '/profile' },
     { icon: MessageSquare, label: 'Messages', path: '/messages' },
-    { icon: Bell, label: 'Notifications', path: '/notifications' },
     { icon: Search, label: 'Find Mentors', path: '/find-mentors' },
+    { icon: Bell, label: 'Notifications', path: '/notifications' },
     { icon: Settings, label: 'Settings', path: '/settings' },
     { icon: HelpCircle, label: 'Help', path: '/help' }
   ];

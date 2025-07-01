@@ -95,12 +95,8 @@ const SignUpPage = () => {
       const result = await register(userData)
       
       if (result.success) {
-        // Redirect based on user role
-        if (result.user.role === 'mentor') {
-          navigate('/mentor-dashboard')
-        } else {
-          navigate('/mentee-dashboard')
-        }
+        // Always redirect to home page after registration
+        navigate('/')
       } else {
         setError(result.error)
       }

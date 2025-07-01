@@ -75,7 +75,9 @@ export const mentorsAPI = {
         rating: { average: 4.9, count: 24 },
         pricing: { oneOnOneSession: 150 },
         bio: 'Experienced software engineer with 8+ years in web development.',
-        isActive: true
+        isActive: true,
+        availability: 'Available this week',
+        location: 'San Francisco, CA'
       },
       {
         _id: '2',
@@ -90,7 +92,26 @@ export const mentorsAPI = {
         rating: { average: 4.8, count: 18 },
         pricing: { oneOnOneSession: 120 },
         bio: 'Product manager with experience in B2B and B2C products.',
-        isActive: true
+        isActive: true,
+        availability: 'Available next week',
+        location: 'Seattle, WA'
+      },
+      {
+        _id: '3',
+        user: {
+          firstName: 'Emily',
+          lastName: 'Davis',
+          profileImage: 'https://ui-avatars.com/api/?name=Emily+Davis'
+        },
+        currentRole: 'UX Design Lead',
+        organization: 'Apple',
+        expertise: ['UI/UX Design', 'Design Systems', 'User Research'],
+        rating: { average: 5.0, count: 31 },
+        pricing: { oneOnOneSession: 180 },
+        bio: 'Design leader with 10+ years of experience.',
+        isActive: true,
+        availability: 'Limited availability',
+        location: 'Cupertino, CA'
       }
     ];
     return Promise.resolve({ data: { mentors: mockMentors } });
@@ -158,6 +179,67 @@ export const messagesAPI = {
   },
   getBySession: (sessionId, params) => api.get(`/messages/${sessionId}`, { params }),
   markAsRead: (id) => api.put(`/messages/${id}/read`),
+  getConversations: () => {
+    // Mock conversations
+    const mockConversations = [
+      {
+        id: '1',
+        participant: {
+          name: 'Sarah Johnson',
+          avatar: 'https://ui-avatars.com/api/?name=Sarah+Johnson',
+          role: 'mentor',
+          online: true
+        },
+        lastMessage: {
+          text: 'Thanks for the great session yesterday!',
+          timestamp: new Date(Date.now() - 3600000),
+          unread: true
+        }
+      },
+      {
+        id: '2',
+        participant: {
+          name: 'Michael Chen',
+          avatar: 'https://ui-avatars.com/api/?name=Michael+Chen',
+          role: 'mentor',
+          online: false
+        },
+        lastMessage: {
+          text: 'Could we schedule another session?',
+          timestamp: new Date(Date.now() - 7200000),
+          unread: false
+        }
+      }
+    ];
+    return Promise.resolve({ data: mockConversations });
+  },
+  getMessages: (conversationId) => {
+    // Mock messages
+    const mockMessages = [
+      {
+        id: '1',
+        senderId: 'other',
+        text: 'Hi! I wanted to thank you for the amazing session yesterday.',
+        timestamp: new Date(Date.now() - 3600000),
+        type: 'text'
+      },
+      {
+        id: '2',
+        senderId: 'me',
+        text: 'You\'re very welcome! I\'m glad it was helpful. How are you progressing with the project?',
+        timestamp: new Date(Date.now() - 3500000),
+        type: 'text'
+      },
+      {
+        id: '3',
+        senderId: 'other',
+        text: 'Great! I\'ve implemented the features we discussed and it\'s working perfectly.',
+        timestamp: new Date(Date.now() - 1800000),
+        type: 'text'
+      }
+    ];
+    return Promise.resolve({ data: mockMessages });
+  }
 };
 
 // Notifications API
@@ -167,17 +249,30 @@ export const notificationsAPI = {
     const mockNotifications = [
       {
         _id: '1',
-        title: 'New session request',
-        message: 'You have a new session request from John Doe',
-        createdAt: new Date().toISOString(),
-        isRead: false
+        type: 'session_reminder',
+        title: 'Session Reminder',
+        message: 'Your session with John Doe starts in 30 minutes',
+        createdAt: new Date(Date.now() - 1800000).toISOString(),
+        isRead: false,
+        priority: 'high'
       },
       {
         _id: '2',
-        title: 'Payment received',
-        message: 'Payment of $150 received for your session',
+        type: 'message',
+        title: 'New Message',
+        message: 'Sarah Johnson sent you a message',
         createdAt: new Date(Date.now() - 3600000).toISOString(),
-        isRead: true
+        isRead: false,
+        priority: 'medium'
+      },
+      {
+        _id: '3',
+        type: 'achievement',
+        title: 'Achievement Unlocked',
+        message: 'You\'ve completed 10 mentoring sessions!',
+        createdAt: new Date(Date.now() - 86400000).toISOString(),
+        isRead: true,
+        priority: 'low'
       }
     ];
     return Promise.resolve({ data: { notifications: mockNotifications } });
@@ -203,8 +298,29 @@ export const paymentsAPI = {
 
 // Reviews API
 export const reviewsAPI = {
-  submit: (data) => api.post('/reviews', data),
+  submit: (data) => {
+    // Mock implementation
+    return Promise.resolve({ data: { success: true } });
+  },
   getMentorReviews: (mentorId, params) => api.get(`/reviews/mentor/${mentorId}`, { params }),
+};
+
+// Feedback API
+export const feedbackAPI = {
+  submit: (data) => {
+    // Mock implementation for session feedback
+    return Promise.resolve({ data: { success: true } });
+  },
+  getSessionFeedback: (sessionId) => {
+    // Mock implementation
+    return Promise.resolve({ 
+      data: { 
+        rating: 5, 
+        feedback: 'Great session!',
+        submittedAt: new Date().toISOString()
+      } 
+    });
+  }
 };
 
 export default api;

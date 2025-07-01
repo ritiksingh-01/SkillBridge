@@ -44,12 +44,8 @@ const LoginPage = () => {
       const result = await login({ email, password });
       
       if (result.success) {
-        // Redirect based on user role
-        if (result.user.role === 'mentor') {
-          navigate('/mentor-dashboard');
-        } else {
-          navigate('/mentee-dashboard');
-        }
+        // Always redirect to home page after login
+        navigate('/');
       } else {
         setError(result.error);
       }

@@ -112,10 +112,10 @@ const router = createBrowserRouter([
     )
   },
 
-  // Redirects for old routes
+  // Legacy redirects - redirect to home for authenticated users
   {
     path: '/mentee-dashboard',
-    element: <Navigate to="/profile" replace />
+    element: <Navigate to="/" replace />
   },
   {
     path: '/findMentorPage',
