@@ -1,200 +1,84 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
-const { auth } = require('../middleware/auth');
+const auth = require('../middleware/auth');
+
 const router = express.Router();
 
-// @route   GET /api/users
-// @desc    Get all users (admin only)
-// @access  Private
-router.get('/', auth, async (req, res) => {
-  try {
-    const { page = 1, limit = 10, role, search } = req.query;
-    
-    let query = {};
-    
-    if (role) {
-      query.role = role;
-    }
-    
-    if (search) {
-      query.$or = [
-        { firstName: { $regex: search, $options: 'i' } },
-        { lastName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    const users = await User.find(query)
-      .select('-password')
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .sort({ createdAt: -1 });
-
-    const total = await User.countDocuments(query);
-
-    res.json({
-      success: true,
-      count: users.length,
-      total,
-      data: users,
-      pagination: {
-        current: parseInt(page),
-        pages: Math.ceil(total / limit),
-        total
-      }
-    });
-  } catch (error) {
-    console.error('Get users error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
-  }
-});
-
 // @route   GET /api/users/profile
-// @desc    Get current user profile
+// @desc    Get user profile
 // @access  Private
 router.get('/profile', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
     res.json({
-      success: true,
-      data: user
+      user: {
+        ...user.toObject(),
+        profileCompletion: user.getProfileCompletion()
+      }
     });
   } catch (error) {
     console.error('Get profile error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
 // @route   PUT /api/users/profile
 // @desc    Update user profile
 // @access  Private
-router.put('/profile', [
-  auth,
+router.put('/profile', auth, [
   body('firstName').optional().trim().notEmpty().withMessage('First name cannot be empty'),
   body('lastName').optional().trim().notEmpty().withMessage('Last name cannot be empty'),
+  body('email').optional().isEmail().normalizeEmail().withMessage('Valid email is required'),
   body('phone').optional().trim(),
-  body('gender').optional().isIn(['Male', 'Female', 'Other']).withMessage('Invalid gender')
+  body('gender').optional().isIn(['male', 'female', 'other']).withMessage('Invalid gender')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
+      return res.status(400).json({ errors: errors.array() });
     }
 
-    const { firstName, lastName, phone, gender, profileImage } = req.body;
-    
-    const updateFields = {};
-    if (firstName) updateFields.firstName = firstName.trim();
-    if (lastName) updateFields.lastName = lastName.trim();
-    if (phone !== undefined) updateFields.phone = phone.trim();
-    if (gender) updateFields.gender = gender;
-    if (profileImage) updateFields.profileImage = profileImage;
+    const allowedUpdates = [
+      'firstName', 'lastName', 'phone', 'gender', 'location', 
+      'about', 'skills', 'education', 'experience', 'socialLinks',
+      'profileImage', 'coverImage', 'preferences'
+    ];
+
+    const updates = {};
+    Object.keys(req.body).forEach(key => {
+      if (allowedUpdates.includes(key)) {
+        updates[key] = req.body[key];
+      }
+    });
+
+    // Check if email is being updated and if it's unique
+    if (updates.email) {
+      const existingUser = await User.findOne({ 
+        email: updates.email, 
+        _id: { $ne: req.user.id } 
+      });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email already in use' });
+      }
+    }
 
     const user = await User.findByIdAndUpdate(
       req.user.id,
-      updateFields,
+      { $set: updates },
       { new: true, runValidators: true }
     ).select('-password');
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    console.log('✅ Profile updated for user:', user.email);
-
     res.json({
-      success: true,
       message: 'Profile updated successfully',
-      data: user
+      user: {
+        ...user.toObject(),
+        profileCompletion: user.getProfileCompletion()
+      }
     });
   } catch (error) {
     console.error('Update profile error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
-  }
-});
-
-// @route   GET /api/users/:id
-// @desc    Get user by ID
-// @access  Private
-router.get('/:id', auth, async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id).select('-password');
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: user
-    });
-  } catch (error) {
-    console.error('Get user error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
-  }
-});
-
-// @route   DELETE /api/users/:id
-// @desc    Delete user (admin only)
-// @access  Private
-router.delete('/:id', auth, async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    // Soft delete - just deactivate the user
-    user.isActive = false;
-    await user.save();
-
-    console.log('✅ User deactivated:', user.email);
-
-    res.json({
-      success: true,
-      message: 'User deactivated successfully'
-    });
-  } catch (error) {
-    console.error('Delete user error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -203,44 +87,49 @@ router.delete('/:id', auth, async (req, res) => {
 // @access  Private
 router.get('/search', auth, async (req, res) => {
   try {
-    const { q, role, limit = 10 } = req.query;
+    const { q, role, skills, page = 1, limit = 10 } = req.query;
     
-    if (!q) {
-      return res.status(400).json({
-        success: false,
-        message: 'Search query is required'
-      });
-    }
-
-    let query = {
-      $or: [
-        { firstName: { $regex: q, $options: 'i' } },
-        { lastName: { $regex: q, $options: 'i' } },
-        { email: { $regex: q, $options: 'i' } }
-      ],
-      isActive: true
-    };
-
+    const query = {};
+    
     if (role) {
       query.role = role;
+    }
+    
+    if (q) {
+      query.$or = [
+        { firstName: { $regex: q, $options: 'i' } },
+        { lastName: { $regex: q, $options: 'i' } },
+        { skills: { $in: [new RegExp(q, 'i')] } }
+      ];
+    }
+    
+    if (skills) {
+      const skillsArray = skills.split(',');
+      query.skills = { $in: skillsArray };
     }
 
     const users = await User.find(query)
       .select('-password')
-      .limit(parseInt(limit))
-      .sort({ firstName: 1 });
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .sort({ lastActive: -1 });
+
+    const total = await User.countDocuments(query);
 
     res.json({
-      success: true,
-      count: users.length,
-      data: users
+      users: users.map(user => ({
+        ...user.toObject(),
+        profileCompletion: user.getProfileCompletion()
+      })),
+      pagination: {
+        current: page,
+        pages: Math.ceil(total / limit),
+        total
+      }
     });
   } catch (error) {
     console.error('Search users error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
