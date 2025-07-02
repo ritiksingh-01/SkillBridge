@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import Header from '../../Components/Header';
 import { useAuth } from '../../context/AuthContext';
+import { mentorsAPI, sessionsAPI, notificationsAPI } from '../../services/api';
 
 const MentorDashboard = () => {
   const { user } = useAuth();
@@ -37,7 +38,6 @@ const MentorDashboard = () => {
   const [sessions, setSessions] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -46,71 +46,17 @@ const MentorDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      setError(null);
-      
-      // Mock data for now since API endpoints might not be working
-      const mockStats = {
-        totalSessions: 24,
-        totalMentees: 12,
-        rating: { average: 4.8, count: 18 },
-        earnings: 15600,
-        responseTime: '~2 hours',
-        completionRate: 95
-      };
+      const [statsRes, sessionsRes, notificationsRes] = await Promise.all([
+        mentorsAPI.getDashboardStats(),
+        sessionsAPI.getAll({ limit: 10 }),
+        notificationsAPI.getAll({ limit: 5 })
+      ]);
 
-      const mockSessions = [
-        {
-          _id: '1',
-          title: 'React Development Guidance',
-          mentee: {
-            firstName: 'John',
-            lastName: 'Doe',
-            profileImage: 'https://ui-avatars.com/api/?name=John+Doe'
-          },
-          scheduledAt: new Date().toISOString(),
-          duration: 60,
-          price: 500,
-          status: 'pending',
-          meetingType: 'video'
-        },
-        {
-          _id: '2',
-          title: 'Career Transition Advice',
-          mentee: {
-            firstName: 'Jane',
-            lastName: 'Smith',
-            profileImage: 'https://ui-avatars.com/api/?name=Jane+Smith'
-          },
-          scheduledAt: new Date(Date.now() + 86400000).toISOString(),
-          duration: 45,
-          price: 400,
-          status: 'confirmed',
-          meetingType: 'video'
-        }
-      ];
-
-      const mockNotifications = [
-        {
-          _id: '1',
-          title: 'New session request',
-          createdAt: new Date().toISOString()
-        },
-        {
-          _id: '2',
-          title: 'Payment received',
-          createdAt: new Date(Date.now() - 3600000).toISOString()
-        }
-      ];
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      setStats(mockStats);
-      setSessions(mockSessions);
-      setNotifications(mockNotifications);
+      setStats(statsRes.data.stats);
+      setSessions(sessionsRes.data.sessions);
+      setNotifications(notificationsRes.data.notifications);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      setError('Failed to load dashboard data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -118,14 +64,8 @@ const MentorDashboard = () => {
 
   const handleSessionAction = async (sessionId, action) => {
     try {
-      // Update session status locally for now
-      setSessions(prev => 
-        prev.map(session => 
-          session._id === sessionId 
-            ? { ...session, status: action }
-            : session
-        )
-      );
+      await sessionsAPI.updateStatus(sessionId, { status: action });
+      fetchDashboardData(); // Refresh data
     } catch (error) {
       console.error('Error updating session:', error);
     }
@@ -239,31 +179,8 @@ const MentorDashboard = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
-        <div className="flex items-center justify-center h-96 mt-20">
+        <div className="flex items-center justify-center h-96">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="flex items-center justify-center h-96 mt-20">
-          <div className="text-center">
-            <div className="text-red-600 mb-4">
-              <AlertCircle className="w-12 h-12 mx-auto" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Dashboard</h3>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <button 
-              onClick={fetchDashboardData}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Try Again
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -277,7 +194,7 @@ const MentorDashboard = () => {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {user?.firstName || 'Mentor'}! 👋
+            Welcome back, {user?.firstName}! 👋
           </h1>
           <p className="text-gray-600">Here's what's happening with your mentorship activities today.</p>
         </div>
@@ -286,7 +203,7 @@ const MentorDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
             title="Total Sessions"
-            value={stats?.totalSessions || 0}
+            value={stats.totalSessions}
             icon={Calendar}
             color="bg-blue-600"
             change={12}
@@ -294,7 +211,7 @@ const MentorDashboard = () => {
           />
           <StatCard
             title="Active Mentees"
-            value={stats?.totalMentees || 0}
+            value={stats.totalMentees}
             icon={Users}
             color="bg-green-600"
             change={8}
@@ -302,14 +219,14 @@ const MentorDashboard = () => {
           />
           <StatCard
             title="Average Rating"
-            value={`${stats?.rating?.average?.toFixed(1) || '0.0'}/5`}
+            value={`${stats.rating.average.toFixed(1)}/5`}
             icon={Star}
             color="bg-yellow-600"
-            description={`${stats?.rating?.count || 0} reviews`}
+            description={`${stats.rating.count} reviews`}
           />
           <StatCard
             title="Response Time"
-            value={stats?.responseTime || '~2 hours'}
+            value={stats.responseTime}
             icon={Clock}
             color="bg-purple-600"
             description="Average response"
@@ -336,7 +253,7 @@ const MentorDashboard = () => {
               </div>
               <div className="p-6">
                 <div className="space-y-4">
-                  {sessions && sessions.length > 0 ? (
+                  {sessions.length > 0 ? (
                     sessions.map((session) => (
                       <SessionCard key={session._id} session={session} />
                     ))
@@ -389,7 +306,7 @@ const MentorDashboard = () => {
                 <Bell className="w-5 h-5 text-gray-400" />
               </div>
               <div className="space-y-3">
-                {notifications && notifications.length > 0 ? (
+                {notifications.length > 0 ? (
                   notifications.slice(0, 3).map((notification) => (
                     <div key={notification._id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
                       <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
@@ -415,12 +332,12 @@ const MentorDashboard = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Completion Rate</span>
-                  <span className="text-sm font-medium text-gray-900">{stats?.completionRate || 0}%</span>
+                  <span className="text-sm font-medium text-gray-900">{stats.completionRate}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-green-600 h-2 rounded-full" 
-                    style={{ width: `${stats?.completionRate || 0}%` }}
+                    style={{ width: `${stats.completionRate}%` }}
                   ></div>
                 </div>
                 
