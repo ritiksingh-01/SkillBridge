@@ -1,183 +1,225 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const { createServer } = require('http');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
 const app = express();
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    methods: ["GET", "POST"]
+  }
+});
 
-// Middleware
+// Security middleware
+app.use(helmet());
 app.use(cors({
   origin: process.env.CLIENT_URL || "http://localhost:5173",
   credentials: true
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// Database connection with better error handling
+// Rate limiting (more lenient for development)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000 // increased limit for development
+});
+app.use('/api/', limiter);
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Make io available to routes
+app.set('io', io);
+
+// Database connection with simplified error handling
 const connectDB = async () => {
   try {
     console.log('🔄 Connecting to MongoDB Atlas...');
+    console.log('📍 Connection string:', process.env.MONGODB_URI.replace(/\/\/.*@/, '//***:***@'));
     
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+
+    console.log(`✅ MongoDB Connected Successfully!`);
     console.log(`📊 Database: ${conn.connection.name}`);
-    
-    // Test the connection
-    const collections = await mongoose.connection.db.listCollections().toArray();
-    console.log(`📁 Available collections: ${collections.length}`);
-    
+    console.log(`🌐 Host: ${conn.connection.host}`);
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);
+    console.error('🔧 Please check:');
+    console.error('   1. Your internet connection');
+    console.error('   2. MongoDB Atlas credentials');
+    console.error('   3. IP whitelist in MongoDB Atlas');
+    console.error('   4. Network firewall settings');
     
-    // More specific error messages
-    if (error.message.includes('authentication failed')) {
-      console.error('🔐 Authentication failed. Please check your username and password.');
-    } else if (error.message.includes('network')) {
-      console.error('🌐 Network error. Please check your internet connection.');
-    } else if (error.message.includes('timeout')) {
-      console.error('⏰ Connection timeout. Please try again.');
-    }
-    
-    process.exit(1);
+    // Don't exit in development, keep trying
+    console.log('🔄 Retrying connection in 5 seconds...');
+    setTimeout(connectDB, 5000);
   }
 };
 
 // Connect to database
 connectDB();
 
-// Import routes
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
-const mentorRoutes = require('./routes/mentors');
-const sessionRoutes = require('./routes/sessions');
-const messageRoutes = require('./routes/messages');
-const notificationRoutes = require('./routes/notifications');
-
-// Use routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/mentors', mentorRoutes);
-app.use('/api/sessions', sessionRoutes);
-app.use('/api/messages', messageRoutes);
-app.use('/api/notifications', notificationRoutes);
-
-// Health check endpoint
-app.get('/api/health', async (req, res) => {
-  try {
-    // Check database connection
-    const dbStatus = mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected';
-    const dbName = mongoose.connection.name || 'Unknown';
-    
-    res.json({ 
-      status: 'OK', 
-      message: 'Server is running',
-      database: {
-        status: dbStatus,
-        name: dbName,
-        host: mongoose.connection.host
-      },
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: 'ERROR',
-      message: 'Health check failed',
-      error: error.message
-    });
-  }
+// Handle MongoDB connection events
+mongoose.connection.on('connected', () => {
+  console.log('🟢 Mongoose connected to MongoDB Atlas');
 });
 
-// Test endpoint
-app.get('/api/test', (req, res) => {
-  res.json({ 
-    message: 'Backend is working!',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
+mongoose.connection.on('error', (err) => {
+  console.error('🔴 Mongoose connection error:', err.message);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('🟡 Mongoose disconnected from MongoDB Atlas');
+});
+
+// Socket.io connection handling
+io.on('connection', (socket) => {
+  console.log('👤 User connected:', socket.id);
+  
+  socket.on('join-room', (roomId) => {
+    socket.join(roomId);
+    console.log(`🏠 User ${socket.id} joined room ${roomId}`);
+  });
+  
+  socket.on('send-message', (data) => {
+    socket.to(data.roomId).emit('receive-message', data);
+  });
+  
+  socket.on('disconnect', () => {
+    console.log('👋 User disconnected:', socket.id);
   });
 });
 
-// Database test endpoint
+// Routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/mentors', require('./routes/mentors'));
+app.use('/api/sessions', require('./routes/sessions'));
+app.use('/api/messages', require('./routes/messages'));
+app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/payments', require('./routes/payments'));
+app.use('/api/reviews', require('./routes/reviews'));
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  const dbState = mongoose.connection.readyState;
+  const states = {
+    0: 'Disconnected',
+    1: 'Connected',
+    2: 'Connecting',
+    3: 'Disconnecting'
+  };
+
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'SkillBridge API is running',
+    timestamp: new Date().toISOString(),
+    database: {
+      status: states[dbState],
+      name: mongoose.connection.name || 'Not connected'
+    }
+  });
+});
+
+// Test database endpoint
 app.get('/api/test-db', async (req, res) => {
   try {
+    const dbState = mongoose.connection.readyState;
+    const states = {
+      0: 'Disconnected',
+      1: 'Connected',
+      2: 'Connecting',
+      3: 'Disconnecting'
+    };
+    
+    // Test database operation
     const collections = await mongoose.connection.db.listCollections().toArray();
-    const stats = await mongoose.connection.db.stats();
     
     res.json({
-      message: 'Database connection successful!',
-      database: mongoose.connection.name,
-      collections: collections.map(col => col.name),
-      stats: {
-        collections: stats.collections,
-        dataSize: stats.dataSize,
-        storageSize: stats.storageSize
+      status: 'success',
+      message: 'Database connection test successful',
+      database: {
+        state: states[dbState],
+        host: mongoose.connection.host,
+        name: mongoose.connection.name,
+        collections: collections.map(c => c.name)
       }
     });
   } catch (error) {
     res.status(500).json({
-      message: 'Database test failed',
+      status: 'error',
+      message: 'Database connection test failed',
       error: error.message
     });
   }
+});
+
+// Simple test route
+app.get('/api/test', (req, res) => {
+  res.json({
+    status: 'success',
+    message: 'API is working!',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('🚨 Error:', err.message);
-  console.error('Stack:', err.stack);
   
-  res.status(err.status || 500).json({ 
-    success: false,
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong!',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  // MongoDB specific errors
+  if (err.name === 'ValidationError') {
+    const errors = Object.values(err.errors).map(e => e.message);
+    return res.status(400).json({
+      message: 'Validation Error',
+      errors
+    });
+  }
+  
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyValue)[0];
+    return res.status(400).json({
+      message: `${field} already exists`
+    });
+  }
+  
+  res.status(500).json({ 
+    message: 'Something went wrong!',
+    error: err.message
   });
 });
 
 // 404 handler
 app.use('*', (req, res) => {
-  console.log('❌ Route not found:', req.originalUrl);
   res.status(404).json({ 
-    success: false,
     message: `Route ${req.originalUrl} not found`,
     availableRoutes: [
-      'GET /api/health - Health check',
-      'GET /api/test - Test API',
-      'GET /api/test-db - Test database connection',
-      'POST /api/auth/register - User registration',
-      'POST /api/auth/login - User login',
-      'GET /api/auth/me - Get current user',
-      'POST /api/auth/logout - User logout',
-      'GET /api/users - Get all users',
-      'GET /api/mentors - Get all mentors',
+      'GET /api/health',
+      'GET /api/test',
+      'GET /api/test-db',
+      'POST /api/auth/register',
+      'POST /api/auth/login'
     ]
   });
 });
 
 const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📱 Socket.io server ready for connections`);
   console.log(`🌐 API Base URL: http://localhost:${PORT}/api`);
   console.log(`🔍 Health Check: http://localhost:${PORT}/api/health`);
   console.log(`🧪 Test API: http://localhost:${PORT}/api/test`);
-  console.log(`📊 Test DB: http://localhost:${PORT}/api/test-db`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+  console.log(`💾 Test DB: http://localhost:${PORT}/api/test-db`);
 });
 
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('\n🛑 Shutting down gracefully...');
-  try {
-    await mongoose.connection.close();
-    console.log('📊 Database connection closed.');
-    process.exit(0);
-  } catch (error) {
-    console.error('❌ Error during shutdown:', error);
-    process.exit(1);
-  }
-});
-
-module.exports = app;
+module.exports = { app, io };
