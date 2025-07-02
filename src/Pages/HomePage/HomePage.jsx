@@ -30,6 +30,8 @@ import NewsletterSignup from "../../Components/NewsletterSignup";
 import LogoCarousel from "../../Components/LogoCarousel";
 import HowItWorksSection from "../../Components/HowItWorksSection";
 import Footer from "../../Components/Footer";
+import { useAuth } from "../../context/AuthContext";
+import Header from "../../Components/Header";
 
 // Animated 3D Model Component
 const Model3D = () => {
@@ -146,6 +148,7 @@ const StatCard = ({ value, label, description }) => {
 // Main HomePage Component
 const HomePage = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [activeSkillCategory, setActiveSkillCategory] = useState("Technology");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
@@ -206,79 +209,84 @@ const HomePage = () => {
   return (
     <div className="w-full min-h-screen bg-gray-50 flex flex-col justify-start items-start font-sans">
       {/* Modern Glass-effect Navigation */}
-      <motion.div 
-        className="w-full px-6 md:px-16 lg:px-24 py-5 bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50 flex justify-between items-center"
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.2 }}
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700">
-            <motion.div 
-              className="w-6 h-6 absolute inset-1 bg-white"
-              initial={{ rotate: 0 }}
-              animate={{ rotate: 45 }}
-              transition={{ duration: 0.6 }}
-            ></motion.div>
-          </div>
-          <div className="text-gray-800 text-xl font-bold tracking-tight">
-            Skill<span className="text-blue-600">Bridge</span>
-          </div>
-        </div>
-        
-        <div className="hidden lg:flex items-center gap-10">
-          <motion.div 
-            className="text-gray-700 font-medium hover:text-blue-600 transition-colors cursor-pointer"
-            whileHover={{ scale: 1.05 }}
-          >
-            Home
-          </motion.div>
-          <motion.div 
-            className="text-gray-700 font-medium hover:text-blue-600 transition-colors cursor-pointer"
-            whileHover={{ scale: 1.05 }}
-            onClick={handleFindMentor}
-          >
-            Find Mentors
-          </motion.div>
-          <motion.div 
-            className="text-gray-700 font-medium hover:text-blue-600 transition-colors cursor-pointer"
-            whileHover={{ scale: 1.05 }}
-          >
-            About Us
-          </motion.div>
-          <motion.div 
-            className="text-gray-700 font-medium hover:text-blue-600 transition-colors cursor-pointer"
-            whileHover={{ scale: 1.05 }}
-          >
-            Contact
-          </motion.div>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <motion.div 
-            className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 transition-colors rounded-xl cursor-pointer hidden md:block"
-            whileHover={{ scale: 1.05 }}
-            onClick={handleLoginPage}
-          >
-            <div className="text-gray-700 font-medium">Login</div>
-          </motion.div>
-          <motion.div 
-            className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-colors rounded-xl cursor-pointer shadow-lg shadow-blue-200/50 hidden md:block"
-            whileHover={{ scale: 1.05 }}
-            onClick={handleSignUpPage}
-          >
-            <div className="text-white font-medium">Sign Up</div>
-          </motion.div>
-          
-          {/* Mobile Menu Button */}
-          <div className="lg:hidden cursor-pointer" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </div>
-        </div>
-      </motion.div>
+            {isAuthenticated && <Header />}
       
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
+      {/* Modern Glass-effect Navigation - Only show if NOT authenticated */}
+      {!isAuthenticated && (
+        <motion.div 
+          className="w-full px-6 md:px-16 lg:px-24 py-5 bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50 flex justify-between items-center"
+          initial={{ y: -100 }}
+          animate={{ y: 0 }}
+          transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.2 }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700">
+              <motion.div 
+                className="w-6 h-6 absolute inset-1 bg-white"
+                initial={{ rotate: 0 }}
+                animate={{ rotate: 45 }}
+                transition={{ duration: 0.6 }}
+              ></motion.div>
+            </div>
+            <div className="text-gray-800 text-xl font-bold tracking-tight">
+              Skill<span className="text-blue-600">Bridge</span>
+            </div>
+          </div>
+          
+          <div className="hidden lg:flex items-center gap-10">
+            <motion.div 
+              className="text-gray-700 font-medium hover:text-blue-600 transition-colors cursor-pointer"
+              whileHover={{ scale: 1.05 }}
+            >
+              Home
+            </motion.div>
+            <motion.div 
+              className="text-gray-700 font-medium hover:text-blue-600 transition-colors cursor-pointer"
+              whileHover={{ scale: 1.05 }}
+              onClick={handleFindMentor}
+            >
+              Find Mentors
+            </motion.div>
+            <motion.div 
+              className="text-gray-700 font-medium hover:text-blue-600 transition-colors cursor-pointer"
+              whileHover={{ scale: 1.05 }}
+            >
+              About Us
+            </motion.div>
+            <motion.div 
+              className="text-gray-700 font-medium hover:text-blue-600 transition-colors cursor-pointer"
+              whileHover={{ scale: 1.05 }}
+            >
+              Contact
+            </motion.div>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <motion.div 
+              className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 transition-colors rounded-xl cursor-pointer hidden md:block"
+              whileHover={{ scale: 1.05 }}
+              onClick={handleLoginPage}
+            >
+              <div className="text-gray-700 font-medium">Login</div>
+            </motion.div>
+            <motion.div 
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-colors rounded-xl cursor-pointer shadow-lg shadow-blue-200/50 hidden md:block"
+              whileHover={{ scale: 1.05 }}
+              onClick={handleSignUpPage}
+            >
+              <div className="text-white font-medium">Sign Up</div>
+            </motion.div>
+            
+            {/* Mobile Menu Button */}
+            <div className="lg:hidden cursor-pointer" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </div>
+          </div>
+        </motion.div>
+      )}
+      
+      {/* Mobile Menu - Only show if NOT authenticated */}
+      {!isAuthenticated && mobileMenuOpen && (
         <motion.div 
           className="fixed inset-0 bg-white z-40 pt-20 px-6 lg:hidden overflow-y-auto"
           initial={{ opacity: 0, x: "100%" }}
@@ -309,7 +317,6 @@ const HomePage = () => {
           </div>
         </motion.div>
       )}
-
       {/* Enhanced Hero Section with 3D Element and Animation */}
       <HeroSection/>
 
@@ -317,7 +324,7 @@ const HomePage = () => {
       <LogoCarousel/> 
 
       {/* Enhanced Video Introduction Section */}
-      <div className="w-full px-6 md:px-16 lg:px-24 py-20 bg-gradient-to-br from-blue-50 to-white">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-20 bg-gradient-to-br from-blue-50 to-white">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">
             <motion.div 
@@ -403,7 +410,7 @@ const HomePage = () => {
       <HowItWorksSection/>
 
       {/* Success Metrics Section - Enhanced with Animations */}
-      <div className="w-full px-6 md:px-16 lg:px-24 py-24 bg-gradient-to-br from-blue-900 via-indigo-900 to-blue-800 text-white relative overflow-hidden">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-24 bg-gradient-to-br from-blue-900 via-indigo-900 to-blue-800 text-white relative overflow-hidden">
         {/* Abstract Background Shapes */}
         <div className="absolute inset-0 overflow-hidden opacity-20">
           <div className="absolute top-0 left-1/4 w-64 h-64 rounded-full bg-blue-500 filter blur-3xl"></div>
@@ -455,7 +462,7 @@ const HomePage = () => {
       </div>
 
       {/* Skill Categories Section - Enhanced UI */}
-      <div className="w-full px-6 md:px-16 lg:px-24 py-24 bg-white">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-24 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <motion.div 
@@ -583,7 +590,7 @@ const HomePage = () => {
       <FAQSection/>
 
         {/* Newsletter Section */}
-      <div className="w-full px-6 md:px-16 lg:px-24 py-20 bg-white">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-20 bg-white">
         <NewsletterSignup />
       </div>
 

@@ -30,12 +30,7 @@ const userSchema = new mongoose.Schema({
   },
   gender: {
     type: String,
-    enum: ['Male', 'Female', 'Non-binary', 'Transgender', 'Intersex', 'Other'],
-  },
-  role: {
-    type: String,
-    enum: ['mentee', 'mentor', 'admin'],
-    default: 'mentee'
+    enum: ['male', 'female', 'other']
   },
   profileImage: {
     type: String,

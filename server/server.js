@@ -40,10 +40,8 @@ app.set('io', io);
 // Database connection with simplified error handling
 const connectDB = async () => {
   try {
-    console.log('🔄 Connecting to MongoDB Atlas...');
-    console.log('📍 Connection string:', process.env.MONGODB_URI.replace(/\/\/.*@/, '//***:***@'));
-    
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+    console.log('🔄 Connecting to MongoDB...');
+    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://ritikrajput4141:3o3A98At8Dehzy8M@cluster0.q0hsrle.mongodb.net/', {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });

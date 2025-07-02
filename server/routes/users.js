@@ -31,8 +31,7 @@ router.put('/profile', auth, [
   body('lastName').optional().trim().notEmpty().withMessage('Last name cannot be empty'),
   body('email').optional().isEmail().normalizeEmail().withMessage('Valid email is required'),
   body('phone').optional().trim(),
-  body('location').optional().trim(),
-  body('about').optional().isLength({ max: 1000 }).withMessage('About section cannot exceed 1000 characters')
+  body('gender').optional().isIn(['male', 'female', 'other']).withMessage('Invalid gender')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
