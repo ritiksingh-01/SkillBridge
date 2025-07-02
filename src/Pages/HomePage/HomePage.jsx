@@ -207,7 +207,7 @@ const HomePage = () => {
     <div className="w-full min-h-screen bg-gray-50 flex flex-col justify-start items-start font-sans">
       {/* Modern Glass-effect Navigation */}
       <motion.div 
-        className="w-full px-6 md:px-16 lg:px-24 py-5 bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50 flex justify-between items-center"
+        className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-5 bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50 flex justify-between items-center"
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.2 }}
@@ -317,7 +317,7 @@ const HomePage = () => {
       <LogoCarousel/> 
 
       {/* Enhanced Video Introduction Section */}
-      <div className="w-full px-6 md:px-16 lg:px-24 py-20 bg-gradient-to-br from-blue-50 to-white">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-20 bg-gradient-to-br from-blue-50 to-white">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">
             <motion.div 
@@ -403,7 +403,7 @@ const HomePage = () => {
       <HowItWorksSection/>
 
       {/* Success Metrics Section - Enhanced with Animations */}
-      <div className="w-full px-6 md:px-16 lg:px-24 py-24 bg-gradient-to-br from-blue-900 via-indigo-900 to-blue-800 text-white relative overflow-hidden">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-24 bg-gradient-to-br from-blue-900 via-indigo-900 to-blue-800 text-white relative overflow-hidden">
         {/* Abstract Background Shapes */}
         <div className="absolute inset-0 overflow-hidden opacity-20">
           <div className="absolute top-0 left-1/4 w-64 h-64 rounded-full bg-blue-500 filter blur-3xl"></div>
@@ -455,7 +455,7 @@ const HomePage = () => {
       </div>
 
       {/* Skill Categories Section - Enhanced UI */}
-      <div className="w-full px-6 md:px-16 lg:px-24 py-24 bg-white">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-24 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <motion.div 
@@ -583,7 +583,7 @@ const HomePage = () => {
       <FAQSection/>
 
         {/* Newsletter Section */}
-      <div className="w-full px-6 md:px-16 lg:px-24 py-20 bg-white">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-20 bg-white">
         <NewsletterSignup />
       </div>
 
