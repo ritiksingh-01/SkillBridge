@@ -55,7 +55,7 @@ const HeroSection = () => {
               Connect with industry leaders who provide personalized guidance, practical insights, and help you navigate your professional journey effectively.
             </p>
             
-            <div className="grid grid-cols-2 gap-4 md:gap-8 mt-4 w-full md:w-auto">
+            <div className="grid grid-cols-2 gap-6 mt-4 w-full">
               {[
                 { icon: <Users className="w-5 h-5 text-blue-600" />, number: "5,000+", text: "Expert Mentors" },
                 { icon: <Briefcase className="w-5 h-5 text-blue-600" />, number: "500+", text: "Companies" },
@@ -64,17 +64,17 @@ const HeroSection = () => {
               ].map((item, index) => (
                 <motion.div 
                   key={index} 
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-3"
                   initial={{ opacity: 0, y: 10 }}
                   animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                 >
-                  <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0 shadow-md transform hover:scale-110 transition-transform">
+                  <div className="w-12 h-12 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0 shadow-md transform hover:scale-110 transition-transform">
                     {item.icon}
                   </div>
                   <div>
-                    <p className="text-gray-900 font-semibold">{item.number}</p>
-                    <p className="text-gray-600 text-sm">{ item.text}</p>
+                    <p className="text-gray-900 font-semibold text-lg">{item.number}</p>
+                    <p className="text-gray-600 text-sm">{item.text}</p>
                   </div>
                 </motion.div>
               ))}
