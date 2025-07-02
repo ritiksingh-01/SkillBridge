@@ -30,8 +30,8 @@ import NewsletterSignup from "../../Components/NewsletterSignup";
 import LogoCarousel from "../../Components/LogoCarousel";
 import HowItWorksSection from "../../Components/HowItWorksSection";
 import Footer from "../../Components/Footer";
-import { useAuth } from "../../context/AuthContext";
 import Header from "../../Components/Header";
+import { useAuth } from "../../context/AuthContext";
 
 // Animated 3D Model Component
 const Model3D = () => {
