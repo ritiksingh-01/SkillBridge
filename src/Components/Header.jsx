@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHome, faChalkboardTeacher, faEnvelope, faBell, faUser, faCog, faQuestionCircle, faSignOutAlt, faBars, faTimes, faChevronDown, faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faHome, faChalkboardTeacher, faEnvelope, faBell, faUser, faCog, faQuestionCircle, faSignOutAlt, faBars, faTimes, faChevronDown, faSearch, faTachometerAlt } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -89,6 +89,12 @@ const Header = () => {
       <nav className="hidden md:flex items-center space-x-2">
         <NavItem 
           icon={<FontAwesomeIcon icon={faHome} />} 
+          text="Home" 
+          active={isActive('/')} 
+          onClick={() => handleNavigation('/')} 
+        />
+        <NavItem 
+          icon={<FontAwesomeIcon icon={faTachometerAlt} />} 
           text="Dashboard" 
           active={isActive(getDashboardPath())} 
           onClick={() => handleNavigation(getDashboardPath())} 
@@ -183,6 +189,12 @@ const Header = () => {
           <div className="flex flex-col py-2">
             <MobileNavItem 
               icon={<FontAwesomeIcon icon={faHome} />} 
+              text="Home" 
+              active={isActive('/')} 
+              onClick={() => handleNavigation('/')} 
+            />
+            <MobileNavItem 
+              icon={<FontAwesomeIcon icon={faTachometerAlt} />} 
               text="Dashboard" 
               active={isActive(getDashboardPath())} 
               onClick={() => handleNavigation(getDashboardPath())} 
