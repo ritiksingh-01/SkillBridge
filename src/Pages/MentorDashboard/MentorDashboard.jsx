@@ -22,7 +22,6 @@ import {
 } from 'lucide-react';
 import Header from '../../Components/Header';
 import { useAuth } from '../../context/AuthContext';
-import { mentorsAPI, sessionsAPI, notificationsAPI } from '../../services/api';
 
 const MentorDashboard = () => {
   const { user } = useAuth();
@@ -38,6 +37,61 @@ const MentorDashboard = () => {
   const [sessions, setSessions] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Mock data for development
+  const mockStats = {
+    totalSessions: 24,
+    totalMentees: 18,
+    rating: { average: 4.8, count: 15 },
+    earnings: 12500,
+    responseTime: '~2 hours',
+    completionRate: 95
+  };
+
+  const mockSessions = [
+    {
+      _id: '1',
+      title: 'React Development Session',
+      mentee: {
+        firstName: 'Alice',
+        lastName: 'Johnson',
+        profileImage: 'https://randomuser.me/api/portraits/women/1.jpg'
+      },
+      scheduledAt: new Date().toISOString(),
+      duration: 60,
+      meetingType: 'video',
+      price: 150,
+      status: 'pending'
+    },
+    {
+      _id: '2',
+      title: 'Career Guidance',
+      mentee: {
+        firstName: 'Bob',
+        lastName: 'Smith',
+        profileImage: 'https://randomuser.me/api/portraits/men/1.jpg'
+      },
+      scheduledAt: new Date(Date.now() + 86400000).toISOString(),
+      duration: 45,
+      meetingType: 'video',
+      price: 120,
+      status: 'confirmed'
+    }
+  ];
+
+  const mockNotifications = [
+    {
+      _id: '1',
+      title: 'New session request from Alice Johnson',
+      createdAt: new Date().toISOString()
+    },
+    {
+      _id: '2',
+      title: 'Payment received for completed session',
+      createdAt: new Date(Date.now() - 3600000).toISOString()
+    }
+  ];
 
   useEffect(() => {
     fetchDashboardData();
@@ -46,17 +100,32 @@ const MentorDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [statsRes, sessionsRes, notificationsRes] = await Promise.all([
-        mentorsAPI.getDashboardStats(),
-        sessionsAPI.getAll({ limit: 10 }),
-        notificationsAPI.getAll({ limit: 5 })
-      ]);
-
-      setStats(statsRes.data.stats);
-      setSessions(sessionsRes.data.sessions);
-      setNotifications(notificationsRes.data.notifications);
+      setError(null);
+      
+      // For now, use mock data since API might not be ready
+      // TODO: Replace with actual API calls when backend is ready
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setStats(mockStats);
+      setSessions(mockSessions);
+      setNotifications(mockNotifications);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      setError('Failed to load dashboard data');
+      
+      // Set default values to prevent crashes
+      setStats({
+        totalSessions: 0,
+        totalMentees: 0,
+        rating: { average: 0, count: 0 },
+        earnings: 0,
+        responseTime: '~2 hours',
+        completionRate: 100
+      });
+      setSessions([]);
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
@@ -64,8 +133,17 @@ const MentorDashboard = () => {
 
   const handleSessionAction = async (sessionId, action) => {
     try {
-      await sessionsAPI.updateStatus(sessionId, { status: action });
-      fetchDashboardData(); // Refresh data
+      // Update session status locally for now
+      setSessions(prev => 
+        prev.map(session => 
+          session._id === sessionId 
+            ? { ...session, status: action }
+            : session
+        )
+      );
+      
+      // TODO: Make actual API call when backend is ready
+      console.log(`Session ${sessionId} ${action}`);
     } catch (error) {
       console.error('Error updating session:', error);
     }
@@ -85,7 +163,7 @@ const MentorDashboard = () => {
         )}
       </div>
       <div className="space-y-1">
-        <h3 className="text-2xl font-bold text-gray-900">{value}</h3>
+        <h3 className="text-2xl font-bold text-gray-900">{value || 0}</h3>
         <p className="text-sm font-medium text-gray-600">{title}</p>
         {description && (
           <p className="text-xs text-gray-500">{description}</p>
@@ -115,25 +193,33 @@ const MentorDashboard = () => {
       }
     };
 
+    const menteeName = session.mentee ? 
+      `${session.mentee.firstName} ${session.mentee.lastName}` : 
+      'Unknown Mentee';
+    
+    const menteeImage = session.mentee?.profileImage || 
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(menteeName)}`;
+
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center space-x-3">
             <img 
-              src={session.mentee?.profileImage || `https://ui-avatars.com/api/?name=${session.mentee?.firstName}+${session.mentee?.lastName}`}
-              alt={`${session.mentee?.firstName} ${session.mentee?.lastName}`}
+              src={menteeImage}
+              alt={menteeName}
               className="w-10 h-10 rounded-full object-cover"
+              onError={(e) => {
+                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(menteeName)}`;
+              }}
             />
             <div>
-              <h4 className="font-medium text-gray-900">
-                {session.mentee?.firstName} {session.mentee?.lastName}
-              </h4>
-              <p className="text-sm text-gray-600">{session.title}</p>
+              <h4 className="font-medium text-gray-900">{menteeName}</h4>
+              <p className="text-sm text-gray-600">{session.title || 'Mentorship Session'}</p>
             </div>
           </div>
           <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getStatusColor(session.status)}`}>
             {getStatusIcon(session.status)}
-            <span className="capitalize">{session.status}</span>
+            <span className="capitalize">{session.status || 'pending'}</span>
           </div>
         </div>
         
@@ -145,14 +231,14 @@ const MentorDashboard = () => {
             </div>
             <div className="flex items-center space-x-1">
               <Clock className="w-4 h-4" />
-              <span>{session.duration} min</span>
+              <span>{session.duration || 60} min</span>
             </div>
             <div className="flex items-center space-x-1">
               {session.meetingType === 'video' ? <Video className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
-              <span className="capitalize">{session.meetingType}</span>
+              <span className="capitalize">{session.meetingType || 'video'}</span>
             </div>
           </div>
-          <span className="font-medium text-green-600">₹{session.price}</span>
+          <span className="font-medium text-green-600">₹{session.price || 0}</span>
         </div>
 
         {session.status === 'pending' && (
@@ -179,8 +265,34 @@ const MentorDashboard = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
-        <div className="flex items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="flex items-center justify-center h-96 mt-20">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading your dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="flex items-center justify-center h-96 mt-20">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Something went wrong</h3>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button 
+              onClick={fetchDashboardData}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -194,7 +306,7 @@ const MentorDashboard = () => {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {user?.firstName}! 👋
+            Welcome back, {user?.firstName || 'Mentor'}! 👋
           </h1>
           <p className="text-gray-600">Here's what's happening with your mentorship activities today.</p>
         </div>
@@ -219,10 +331,10 @@ const MentorDashboard = () => {
           />
           <StatCard
             title="Average Rating"
-            value={`${stats.rating.average.toFixed(1)}/5`}
+            value={`${(stats.rating?.average || 0).toFixed(1)}/5`}
             icon={Star}
             color="bg-yellow-600"
-            description={`${stats.rating.count} reviews`}
+            description={`${stats.rating?.count || 0} reviews`}
           />
           <StatCard
             title="Response Time"
@@ -253,7 +365,7 @@ const MentorDashboard = () => {
               </div>
               <div className="p-6">
                 <div className="space-y-4">
-                  {sessions.length > 0 ? (
+                  {sessions && sessions.length > 0 ? (
                     sessions.map((session) => (
                       <SessionCard key={session._id} session={session} />
                     ))
@@ -306,7 +418,7 @@ const MentorDashboard = () => {
                 <Bell className="w-5 h-5 text-gray-400" />
               </div>
               <div className="space-y-3">
-                {notifications.length > 0 ? (
+                {notifications && notifications.length > 0 ? (
                   notifications.slice(0, 3).map((notification) => (
                     <div key={notification._id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
                       <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
@@ -332,12 +444,12 @@ const MentorDashboard = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Completion Rate</span>
-                  <span className="text-sm font-medium text-gray-900">{stats.completionRate}%</span>
+                  <span className="text-sm font-medium text-gray-900">{stats.completionRate || 0}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-green-600 h-2 rounded-full" 
-                    style={{ width: `${stats.completionRate}%` }}
+                    style={{ width: `${stats.completionRate || 0}%` }}
                   ></div>
                 </div>
                 
