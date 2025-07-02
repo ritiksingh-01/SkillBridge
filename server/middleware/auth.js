@@ -3,6 +3,7 @@ const User = require('../models/User');
 
 const auth = async (req, res, next) => {
   try {
+    // Simplified auth for development
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
