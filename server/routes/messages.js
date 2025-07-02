@@ -15,8 +15,6 @@ router.post('/', auth, [
   body('receiverId').notEmpty().withMessage('Receiver ID is required')
 ], async (req, res) => {
   try {
-    console.log('💬 Sending message from user:', req.user.id);
-    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -45,18 +43,19 @@ router.post('/', auth, [
       .populate('sender', 'firstName lastName profileImage')
       .populate('receiver', 'firstName lastName profileImage');
 
-    console.log('✅ Message sent successfully');
+    // Emit socket event for real-time messaging
+    const io = req.app.get('io');
+    if (io) {
+      io.to(sessionId).emit('new-message', populatedMessage);
+    }
 
     res.status(201).json({
       message: 'Message sent successfully',
       data: populatedMessage
     });
   } catch (error) {
-    console.error('❌ Send message error:', error);
-    res.status(500).json({ 
-      message: 'Server error',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
+    console.error('Send message error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -65,8 +64,6 @@ router.post('/', auth, [
 // @access  Private
 router.get('/:sessionId', auth, async (req, res) => {
   try {
-    console.log('📨 Getting messages for session:', req.params.sessionId);
-    
     const { page = 1, limit = 50 } = req.query;
 
     // Verify user is part of the session
@@ -84,8 +81,6 @@ router.get('/:sessionId', auth, async (req, res) => {
 
     const total = await Message.countDocuments({ session: req.params.sessionId });
 
-    console.log(`✅ Found ${messages.length} messages`);
-
     res.json({
       messages,
       pagination: {
@@ -95,11 +90,8 @@ router.get('/:sessionId', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ Get messages error:', error);
-    res.status(500).json({ 
-      message: 'Server error',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
+    console.error('Get messages error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -108,8 +100,6 @@ router.get('/:sessionId', auth, async (req, res) => {
 // @access  Private
 router.put('/:id/read', auth, async (req, res) => {
   try {
-    console.log('👁️ Marking message as read:', req.params.id);
-    
     const message = await Message.findById(req.params.id);
     if (!message) {
       return res.status(404).json({ message: 'Message not found' });
@@ -123,15 +113,10 @@ router.put('/:id/read', auth, async (req, res) => {
     message.readAt = new Date();
     await message.save();
 
-    console.log('✅ Message marked as read');
-
     res.json({ message: 'Message marked as read' });
   } catch (error) {
-    console.error('❌ Mark message read error:', error);
-    res.status(500).json({ 
-      message: 'Server error',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
+    console.error('Mark message read error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

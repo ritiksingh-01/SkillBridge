@@ -16,8 +16,6 @@ router.post('/', auth, [
   body('scheduledAt').optional().isISO8601().withMessage('Invalid date format')
 ], async (req, res) => {
   try {
-    console.log('📅 Creating session for user:', req.user.id);
-    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -58,18 +56,13 @@ router.post('/', auth, [
         }
       });
 
-    console.log('✅ Session created successfully');
-
     res.status(201).json({
       message: 'Session created successfully',
       session: populatedSession
     });
   } catch (error) {
-    console.error('❌ Create session error:', error);
-    res.status(500).json({ 
-      message: 'Server error',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
+    console.error('Create session error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -78,8 +71,6 @@ router.post('/', auth, [
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
-    console.log('📋 Getting sessions for user:', req.user.id);
-    
     const { status, type, page = 1, limit = 10 } = req.query;
     
     const query = {
@@ -112,8 +103,6 @@ router.get('/', auth, async (req, res) => {
 
     const total = await Session.countDocuments(query);
 
-    console.log(`✅ Found ${sessions.length} sessions`);
-
     res.json({
       sessions,
       pagination: {
@@ -123,11 +112,8 @@ router.get('/', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ Get sessions error:', error);
-    res.status(500).json({ 
-      message: 'Server error',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
+    console.error('Get sessions error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -136,8 +122,6 @@ router.get('/', auth, async (req, res) => {
 // @access  Private
 router.get('/:id', auth, async (req, res) => {
   try {
-    console.log('📄 Getting session by ID:', req.params.id);
-    
     const session = await Session.findById(req.params.id)
       .populate('mentee', 'firstName lastName profileImage email')
       .populate({
@@ -160,15 +144,10 @@ router.get('/:id', auth, async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    console.log('✅ Session found and authorized');
-
     res.json({ session });
   } catch (error) {
-    console.error('❌ Get session error:', error);
-    res.status(500).json({ 
-      message: 'Server error',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
+    console.error('Get session error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -179,8 +158,6 @@ router.put('/:id/status', auth, [
   body('status').isIn(['confirmed', 'cancelled', 'completed', 'in-progress']).withMessage('Invalid status')
 ], async (req, res) => {
   try {
-    console.log('🔄 Updating session status:', req.params.id, 'to', req.body.status);
-    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -229,18 +206,13 @@ router.put('/:id/status', auth, [
        }
      });
 
-    console.log('✅ Session status updated successfully');
-
     res.json({
       message: 'Session status updated successfully',
       session: updatedSession
     });
   } catch (error) {
-    console.error('❌ Update session status error:', error);
-    res.status(500).json({ 
-      message: 'Server error',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
+    console.error('Update session status error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
