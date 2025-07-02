@@ -9,6 +9,8 @@ import MessagePage from './Pages/MessagePage/MessagePage';
 import NotificationPage from './Pages/NotificationPage/NotificationPage';
 import BecomeMentorPage from './Pages/BecomeMentorPage/BecomeMentorPage';
 import MenteeProfile from './Pages/MenteeProfilePage/MenteeProfile';
+import SettingPage from './Pages/SettingPage/SettingPage';
+import HelpPage from './Pages/HelpPage/HelpPage';
 
 const router = createBrowserRouter([
   {
@@ -49,6 +51,14 @@ const router = createBrowserRouter([
   {
     path: "/menteeProfile",
     element: <MenteeProfile/>
+  },
+  {
+    path: "/settings",
+    element: <SettingPage/>
+  },
+  {
+    path: "/help",
+    element: <HelpPage/>
   },
 ]);
 
