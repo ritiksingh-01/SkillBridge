@@ -112,4 +112,32 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
+// @route   POST /api/notifications
+// @desc    Create a new notification and emit real-time event
+// @access  Private
+router.post('/', auth, async (req, res) => {
+  try {
+    const notification = new Notification({
+      ...req.body,
+      recipient: req.body.recipient || req.user.id,
+      sender: req.user.id
+    });
+    await notification.save();
+
+    // Emit real-time notification to recipient
+    const io = req.app.get('io');
+    if (io) {
+      io.to(notification.recipient.toString()).emit('new-notification', notification);
+    }
+
+    res.status(201).json({
+      message: 'Notification created successfully',
+      notification
+    });
+  } catch (error) {
+    console.error('Create notification error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

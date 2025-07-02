@@ -29,6 +29,7 @@ router.post('/apply', auth, [
       return res.status(400).json({ message: 'Mentor application already exists' });
     }
 
+    // Defensive: Only include categories/expertise if non-empty
     const mentorData = {
       user: req.user.id,
       organization: req.body.organization,
@@ -37,11 +38,17 @@ router.post('/apply', auth, [
       workExperience: req.body.workExperience,
       headline: req.body.headline,
       bio: req.body.bio,
-      expertise: req.body.expertise || [],
-      categories: req.body.categories || [],
       pricing: req.body.pricing || {},
-      availability: req.body.availability || {}
+      availability: req.body.availability || {},
+      isVerified: true,
+      applicationStatus: 'approved'
     };
+    if (Array.isArray(req.body.expertise) && req.body.expertise.length > 0) {
+      mentorData.expertise = req.body.expertise;
+    }
+    if (Array.isArray(req.body.categories) && req.body.categories.length > 0) {
+      mentorData.categories = req.body.categories;
+    }
 
     const mentor = new Mentor(mentorData);
     await mentor.save();
@@ -180,8 +187,13 @@ router.put('/profile', auth, async (req, res) => {
     ];
 
     const updates = {};
+    // Defensive: Only update categories/expertise if non-empty
     Object.keys(req.body).forEach(key => {
       if (allowedUpdates.includes(key)) {
+        if ((key === 'categories' || key === 'expertise') && Array.isArray(req.body[key]) && req.body[key].length === 0) {
+          // skip empty arrays for indexed fields
+          return;
+        }
         updates[key] = req.body[key];
       }
     });

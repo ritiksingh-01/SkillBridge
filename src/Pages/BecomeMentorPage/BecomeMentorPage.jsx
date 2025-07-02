@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import Header from '../../Components/Header';
 import { useNavigate } from 'react-router-dom';
+import { mentorsAPI } from '../../services/api';
 
 const BecomeMentorPage = () => {
   const fileInputRef = useRef(null);
@@ -43,6 +44,8 @@ const BecomeMentorPage = () => {
     },
     profileImage: null
   });
+
+  const [submitError, setSubmitError] = useState(null);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -90,9 +93,28 @@ const BecomeMentorPage = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
+    setSubmitError(null);
+    try {
+      // Map formData to backend expected fields
+      const payload = {
+        organization: formData.organization,
+        industry: formData.industry,
+        currentRole: formData.currentRole,
+        workExperience: formData.workExperience,
+        headline: formData.headline,
+        bio: formData.bio,
+        expertise: [], // Add expertise/skills fields if present in your form
+        categories: [], // Add categories if present in your form
+        pricing: {}, // Add pricing if present in your form
+        availability: {}, // Add availability if present in your form
+      };
+      await mentorsAPI.apply(payload);
+      navigate('/findMentorPage');
+    } catch (err) {
+      setSubmitError('Failed to submit mentor application. Please check your details and try again.');
+    }
   };
 
   const handleBack = () => {
@@ -220,6 +242,10 @@ const BecomeMentorPage = () => {
                   </div>
                 </div>
               </div>
+
+              {submitError && (
+                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">{submitError}</div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
                 {/* First Name */}

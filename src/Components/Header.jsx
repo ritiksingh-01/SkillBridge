@@ -48,10 +48,7 @@ const Header = () => {
     `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.firstName || 'User')}&background=3B82F6&color=fff`;
 
   const getProfilePath = () => {
-    if (user?.role === 'mentor') {
-      return '/mentor-profile';
-    }
-    return '/menteeProfile';
+    return '/profile';
   };
 
   const getDashboardPath = () => {

@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Send, Paperclip, ArrowLeft, Search, Calendar, ChevronDown, MoreVertical, Phone, Video, Clock, Star, Filter } from 'lucide-react';
 import Header from '../../Components/Header';
 import Footer from '../../Components/Footer';
+import { useSocket } from '../../context/SocketContext';
+import { messagesAPI } from '../../services/api';
+
 // Query Message Component
 const QueryMessage = ({ message, timestamp, onAttachment }) => {
   return (
@@ -268,6 +271,8 @@ const MessagePage = () => {
   const [activeTab, setActiveTab] = useState('query'); // Fixed: Added state for tab switching
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
+  const socket = useSocket();
+  const [userId, setUserId] = useState(null); // Replace with actual user ID from auth context
   
   // Mock mentors data
   const mentors = [
@@ -338,6 +343,58 @@ const MessagePage = () => {
     }
   ]);
 
+  // Fetch user ID from localStorage or context (replace with your auth logic)
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user && user._id) setUserId(user._id);
+  }, []);
+
+  // Fetch messages from backend when mentor is selected
+  useEffect(() => {
+    if (selectedMentor && userId) {
+      // Join room for this user-mentor pair
+      const roomId = [userId, selectedMentor.id].sort().join('-');
+      if (socket) {
+        socket.emit('join-room', roomId);
+      }
+      // Fetch messages from backend
+      messagesAPI.getBySession(roomId).then(res => {
+        if (res.data && Array.isArray(res.data.data)) {
+          setQueryMessages(res.data.data.map(msg => ({
+            id: msg._id,
+            type: msg.sender === userId ? 'query' : 'response',
+            text: msg.content,
+            timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: msg.sender === userId ? 'sent' : 'received',
+          })));
+        }
+      });
+    }
+  }, [selectedMentor, userId, socket]);
+
+  // Listen for incoming messages
+  useEffect(() => {
+    if (!socket) return;
+    const handleReceiveMessage = (data) => {
+      if (selectedMentor && data.roomId === [userId, selectedMentor.id].sort().join('-')) {
+        setQueryMessages(prev => ([
+          ...prev,
+          {
+            id: data._id || Date.now(),
+            type: data.sender === userId ? 'query' : 'response',
+            text: data.content,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: data.sender === userId ? 'sent' : 'received',
+          }
+        ]));
+      }
+    };
+    socket.on('receive-message', handleReceiveMessage);
+    return () => {
+      socket.off('receive-message', handleReceiveMessage);
+    };
+  }, [socket, selectedMentor, userId]);
+
   // Filter mentors based on search and status
   const filteredMentors = mentors.filter(mentor => {
     const matchesSearch = mentor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -346,16 +403,32 @@ const MessagePage = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const handleSendMessage = () => {
-    if (message.trim() && questionCount < 2) {
+  // Send message via socket and API
+  const handleSendMessage = async () => {
+    if (message.trim() && questionCount < 2 && selectedMentor && userId) {
+      const roomId = [userId, selectedMentor.id].sort().join('-');
       const newMessage = {
-        id: queryMessages.length + 1,
-        type: 'query',
-        text: message,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        status: 'sent'
+        roomId,
+        sender: userId,
+        receiver: selectedMentor.id,
+        content: message,
       };
-      setQueryMessages([...queryMessages, newMessage]);
+      // Send via socket
+      if (socket) {
+        socket.emit('send-message', newMessage);
+      }
+      // Save to backend
+      await messagesAPI.send(newMessage);
+      setQueryMessages(prev => ([
+        ...prev,
+        {
+          id: Date.now(),
+          type: 'query',
+          text: message,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: 'sent',
+        }
+      ]));
       setMessage('');
       setQuestionCount(prev => prev + 1);
     }

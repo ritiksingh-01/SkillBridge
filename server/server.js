@@ -82,7 +82,15 @@ mongoose.connection.on('disconnected', () => {
 // Socket.io connection handling
 io.on('connection', (socket) => {
   console.log('👤 User connected:', socket.id);
-  
+
+  // Listen for user ID to join their personal room
+  socket.on('join-user-room', (userId) => {
+    if (userId) {
+      socket.join(userId);
+      console.log(`🔔 User ${userId} joined their notification room`);
+    }
+  });
+
   socket.on('join-room', (roomId) => {
     socket.join(roomId);
     console.log(`🏠 User ${socket.id} joined room ${roomId}`);

@@ -21,6 +21,8 @@ import Footer from "../../Components/Footer"
 import Header from "../../Components/Header"
 import MentorBanner from "../../Banners/MentorBanner"
 import MentorProfilePage from "../MentorProfilePage/MentorProfilePage"
+import { mentorsAPI } from '../../services/api';
+
 const FindMentorsPage = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedFilters, setSelectedFilters] = useState({
@@ -36,178 +38,26 @@ const FindMentorsPage = () => {
   const [isSortOpen, setIsSortOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 6
+  const [mentors, setMentors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Sample mentor data with online images
-  const allMentors = [
-    {
-      id: 1,
-      name: "David Kim",
-      role: "Senior Product Manager",
-      experience: "Former Amazon, Google",
-      rating: 4.9,
-      reviews: 24,
-      skills: ["Product Strategy", "Leadership", "UX Design"],
-      price: 75,
-      image: "https://randomuser.me/api/portraits/men/1.jpg",
-      availability: "Available this week",
-      badge: "Trending",
-      category: "Product",
-    },
-    {
-      id: 2,
-      name: "Sarah Johnson",
-      role: "Engineering Director",
-      experience: "Former Microsoft, Meta",
-      rating: 4.8,
-      reviews: 31,
-      skills: ["Software Architecture", "Team Management", "Career Growth"],
-      price: 90,
-      image: "https://randomuser.me/api/portraits/women/68.jpg",
-      availability: "Next available May 15",
-      badge: "Top Rated",
-      category: "Engineering",
-    },
-    {
-      id: 3,
-      name: "Michael Chen",
-      role: "Marketing Executive",
-      company: "Google",
-      experience: "Former Spotify, Netflix",
-      rating: 4.9,
-      reviews: 19,
-      skills: ["Growth Strategy", "Brand Building", "Digital Marketing"],
-      price: 65,
-      image: "https://randomuser.me/api/portraits/men/2.jpg",
-      availability: "Available this week",
-      category: "Marketing",
-    },
-    {
-      id: 4,
-      name: "Elena Rodriguez",
-      role: "UX Design Lead",
-      company: "Google",
-      experience: "Former Apple, Airbnb",
-      rating: 5.0,
-      reviews: 27,
-      skills: ["Product Design", "User  Research", "Design Systems"],
-      price: 80,
-      image: "https://randomuser.me/api/portraits/women/69.jpg",
-      availability: "Limited availability",
-      category: "Design",
-    },
-    {
-      id: 5,
-      name: "James Wilson",
-      role: "CTO",
-      company: "Google",
-      experience: "Former Oracle, IBM",
-      rating: 4.7,
-      reviews: 32,
-      skills: ["Technical Leadership", "System Architecture", "Cloud Strategy"],
-      price: 95,
-      image: "https://randomuser.me/api/portraits/men/3.jpg",
-      availability: "Available next week",
-      category: "Engineering",
-    },
-    {
-      id: 6,
-      name: "Aisha Patel",
-      company: "Google",
-      role: "Data Science Director",
-      experience: "Former Tesla, Uber",
-      rating: 4.9,
-      reviews: 18,
-      skills: ["AI/ML", "Analytics Strategy", "Big Data"],
-      price: 85,
-      image: "https://randomuser.me/api/portraits/women/70.jpg",
-      availability: "Available this week",
-      category: "Data",
-    },
-    {
-      id: 7,
-      name: "Laura Smith",
-      company: "Google",
-      role: "Product Marketing Manager",
-      experience: "Former Google, Facebook",
-      rating: 4.6,
-      reviews: 22,
-      skills: ["Market Research", "Product Launch", "Customer Insights"],
-      price: 70,
-      image: "https://randomuser.me/api/portraits/women/71.jpg",
-      availability: "Available this week",
-      category: "Marketing",
-    },
-    {
-      id: 8,
-      name: "Robert Brown",
-      role: "Software Engineer",
-      company: "Google",
-      experience: "Former IBM, Intel",
-      rating: 4.5,
-      reviews: 15,
-      skills: ["Full Stack Development", "DevOps", "Cloud Computing"],
-      price: 80,
-      image: "https://randomuser.me/api/portraits/men/4.jpg",
-      availability: "Available next week",
-      category: "Engineering",
-    },
-    {
-      id: 9,
-      name: "Nina Patel",
-      role: "Data Analyst",
-      company: "Google",
-      experience: "Former Deloitte, Accenture",
-      rating: 4.8,
-      reviews: 20,
-      skills: ["Data Visualization", "Statistical Analysis", "Business Intelligence"],
-      price: 65,
-      image: "https://randomuser.me/api/portraits/women/72.jpg",
-      availability: "Available this week",
-      category: "Data",
-    },
-    {
-      id: 10,
-      name: "Chris Evans",
-      role: "Cybersecurity Specialist",
-      company: "Google",
-      experience: "Former Cisco, Symantec",
-      rating: 4.9,
-      reviews: 30,
-      skills: ["Network Security", " Risk Management", "Incident Response"],
-      price: 100,
-      image: "https://randomuser.me/api/portraits/men/5.jpg",
-      availability: "Available next week",
-      category: "Security",
-    },
-    {
-      id: 11,
-      name: "Sophia Lee",
-      role: "Cloud Solutions Architect",
-      company: "Google",
-      experience: "Former AWS, Google Cloud",
-      rating: 4.7,
-      reviews: 28,
-      skills: ["Cloud Architecture", "Infrastructure as Code", "DevOps"],
-      price: 90,
-      image: "https://randomuser.me/api/portraits/women/73.jpg",
-      availability: "Available this week",
-      category: "Cloud",
-    },
-    {
-      id: 12,
-      name: "Daniel Kim",
-      role: "AI Research Scientist",
-      company: "Google",
-      experience: "Former OpenAI, IBM",
-      rating: 4.8,
-      reviews: 25,
-      skills: ["Machine Learning", "Natural Language Processing", "Computer Vision"],
-      price: 95,
-      image: "https://randomuser.me/api/portraits/men/6.jpg",
-      availability: "Limited availability",
-      category: "AI",
-    },
-  ]
+  useEffect(() => {
+    setLoading(true);
+    mentorsAPI.getAll()
+      .then(res => {
+        if (res.data && Array.isArray(res.data.mentors)) {
+          setMentors(res.data.mentors);
+        } else {
+          setMentors([]);
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        setError('Failed to load mentors');
+        setLoading(false);
+      });
+  }, []);
 
   // Trending domains
   const trendingDomains = [
@@ -356,55 +206,44 @@ const FindMentorsPage = () => {
     }
   }, [isFilterOpen])
 
-  const filteredMentors = allMentors.filter((mentor) => {
+  const filteredMentors = mentors.filter((mentor) => {
     if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      const matchesName = mentor.name.toLowerCase().includes(query)
-      const matchesRole = mentor.role.toLowerCase().includes(query)
-      const matchesSkills = mentor.skills.some((skill) => skill.toLowerCase().includes(query))
-
+      const query = searchQuery.toLowerCase();
+      const matchesName = (mentor.user?.firstName + ' ' + mentor.user?.lastName).toLowerCase().includes(query);
+      const matchesRole = (mentor.currentRole || mentor.headline || '').toLowerCase().includes(query);
+      const matchesSkills = (mentor.expertise || []).some((skill) => skill.toLowerCase().includes(query));
       if (!(matchesName || matchesRole || matchesSkills)) {
-        return false
+        return false;
       }
     }
-
-    if (selectedFilters.categories.length > 0 && !selectedFilters.categories.includes(mentor.category)) {
-      return false
+    if (selectedFilters.categories.length > 0 && !selectedFilters.categories.some(cat => (mentor.categories || []).includes(cat))) {
+      return false;
     }
-
-    if (selectedFilters.skills.length > 0 && !mentor.skills.some((skill) => selectedFilters.skills.includes(skill))) {
-      return false
+    if (selectedFilters.skills.length > 0 && !(mentor.expertise || []).some((skill) => selectedFilters.skills.includes(skill))) {
+      return false;
     }
-
     if (selectedFilters.price) {
-      if (selectedFilters.price === "under50" && mentor.price >= 50) return false
-      if (selectedFilters.price === "50-75" && (mentor.price < 50 || mentor.price > 75)) return false
-      if (selectedFilters.price === "75-100" && (mentor.price < 75 || mentor.price > 100)) return false
-      if (selectedFilters.price === "over100" && mentor.price <= 100) return false
+      const price = mentor.pricing?.oneOnOneSession || 0;
+      if (selectedFilters.price === "under50" && price >= 50) return false;
+      if (selectedFilters.price === "50-75" && (price < 50 || price > 75)) return false;
+      if (selectedFilters.price === "75-100" && (price < 75 || price > 100)) return false;
+      if (selectedFilters.price === "over100" && price <= 100) return false;
     }
-
-    if (selectedFilters.rating && mentor.rating < selectedFilters.rating) {
-      return false
+    if (selectedFilters.rating && (mentor.rating?.average || 0) < selectedFilters.rating) {
+      return false;
     }
-
-    if (selectedFilters.availability) {
-      const availability = mentor.availability.toLowerCase()
-      if (selectedFilters.availability === "today" && !availability.includes("today")) return false
-      if (selectedFilters.availability === "week" && !availability.includes("week")) return false
-      if (selectedFilters.availability === "month" && !availability.includes("month")) return false
-    }
-
-    return true
-  })
+    // Availability filter can be customized based on mentor.availability
+    return true;
+  });
 
   const sortedMentors = [...filteredMentors].sort((a, b) => {
     switch (sortBy) {
       case "price_asc":
-        return a.price - b.price
+        return a.pricing?.oneOnOneSession - b.pricing?.oneOnOneSession
       case "price_desc":
-        return b.price - a.price
+        return b.pricing?.oneOnOneSession - a.pricing?.oneOnOneSession
       case "rating":
-        return b.rating - a.rating
+        return b.rating?.average - a.rating?.average
       case "popular":
         return b.reviews - a.reviews
       default:

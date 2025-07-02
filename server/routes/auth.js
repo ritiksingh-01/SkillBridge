@@ -147,6 +147,7 @@ router.post('/login', [
     if (user.role === 'mentor') {
       console.log('👨‍🏫 Fetching mentor profile...');
       mentorProfile = await Mentor.findOne({ user: user._id });
+      // Do NOT auto-create mentor profile here
     }
 
     console.log('✅ Login successful for:', email);

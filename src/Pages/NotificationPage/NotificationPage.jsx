@@ -21,6 +21,8 @@ import {
   Filter
 } from 'lucide-react';
 import Header from '../../Components/Header';
+import { useSocket } from '../../context/SocketContext';
+import { notificationsAPI } from '../../services/api';
 
 const NotificationPage = () => {
   const [activeFilter, setActiveFilter] = useState('all');
@@ -28,6 +30,8 @@ const NotificationPage = () => {
   const [selectedNotifications, setSelectedNotifications] = useState([]);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'compact'
   const [showActions, setShowActions] = useState(false);
+  const socket = useSocket();
+  const [userId, setUserId] = useState(null); // Replace with actual user ID from auth context
   
   const [notifications, setNotifications] = useState([
     {
@@ -122,6 +126,46 @@ const NotificationPage = () => {
       actionRequired: false
     }
   ]);
+
+  // Fetch user ID from localStorage or context (replace with your auth logic)
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user && user._id) setUserId(user._id);
+  }, []);
+
+  // Fetch notifications from backend
+  useEffect(() => {
+    if (userId) {
+      notificationsAPI.getAll().then(res => {
+        if (res.data && Array.isArray(res.data.data.notifications)) {
+          setNotifications(res.data.data.notifications.map(notif => ({
+            ...notif,
+            time: formatTimeAgo(new Date(notif.createdAt)),
+            timestamp: new Date(notif.createdAt)
+          })));
+        }
+      });
+    }
+  }, [userId]);
+
+  // Listen for real-time notifications
+  useEffect(() => {
+    if (!socket || !userId) return;
+    const handleNewNotification = (notif) => {
+      setNotifications(prev => ([
+        {
+          ...notif,
+          time: formatTimeAgo(new Date(notif.createdAt)),
+          timestamp: new Date(notif.createdAt)
+        },
+        ...prev
+      ]));
+    };
+    socket.on('new-notification', handleNewNotification);
+    return () => {
+      socket.off('new-notification', handleNewNotification);
+    };
+  }, [socket, userId]);
 
   const getNotificationIcon = (type) => {
     const iconClass = "w-5 h-5";

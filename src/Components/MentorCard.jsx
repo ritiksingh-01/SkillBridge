@@ -6,7 +6,7 @@ const MentorCard = ({ mentor }) => {
   const navigate = useNavigate();
   
   function handleViewProfile(){
-    navigate('/mentorProfile', { 
+    navigate('/ViewMentorProfile', { 
       state: { mentorData: mentor } 
     });
   }
