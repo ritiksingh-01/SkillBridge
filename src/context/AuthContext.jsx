@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const API_BASE_URL = import.meta.env.VITE_API_URL;
       
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
@@ -76,7 +76,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const API_BASE_URL = import.meta.env.VITE_API_URL;
       
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',

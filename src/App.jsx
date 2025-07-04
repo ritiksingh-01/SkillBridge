@@ -10,9 +10,7 @@ import ProfilePage from './Pages/ProfilePage/ProfilePage';
 import MessagePage from './Pages/MessagePage/MessagePage';
 import NotificationPage from './Pages/NotificationPage/NotificationPage';
 import BecomeMentorPage from './Pages/BecomeMentorPage/BecomeMentorPage';
-// import MenteeProfile from './Pages/MenteeProfilePage/MenteeProfile';
 import MentorDashboard from './Pages/MentorDashboard/MentorDashboard';
-import MenteeDashboard from './Pages/MenteeDashboard/MenteeDashboard';
 import MentorProfilePage from './Pages/MentorProfilePage/MentorProfilePage';
 
 const router = createBrowserRouter([
@@ -25,14 +23,6 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute requiredRole="mentor">
         <MentorDashboard/>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/mentee-dashboard',
-    element: (
-      <ProtectedRoute requiredRole="mentee">
-        <MenteeDashboard/>
       </ProtectedRoute>
     )
   },

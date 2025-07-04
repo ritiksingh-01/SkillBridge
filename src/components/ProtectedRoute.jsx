@@ -5,6 +5,10 @@ import { useAuth } from '../context/AuthContext';
 const ProtectedRoute = ({ children, requiredRole = null }) => {
   const { isAuthenticated, user, loading } = useAuth();
 
+  // Debug logs to diagnose dashboard navigation issue
+  console.log('ProtectedRoute user:', user);
+  console.log('ProtectedRoute requiredRole:', requiredRole);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">

@@ -97,9 +97,9 @@ const SignUpPage = () => {
       if (result.success) {
         // Redirect based on user role
         if (result.user.role === 'mentor') {
-          navigate('/mentor-dashboard')
+          navigate('/')
         } else {
-          navigate('/mentee-dashboard')
+          navigate('/')
         }
       } else {
         setError(result.error)

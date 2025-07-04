@@ -51,13 +51,6 @@ const Header = () => {
     return '/profile';
   };
 
-  const getDashboardPath = () => {
-    if (user?.role === 'mentor') {
-      return '/mentor-dashboard';
-    }
-    return '/mentee-dashboard';
-  };
-
   if (!isAuthenticated) {
     return null; // Don't show header if not authenticated
   }
@@ -90,12 +83,14 @@ const Header = () => {
           active={isActive('/')} 
           onClick={() => handleNavigation('/')} 
         />
-        <NavItem 
-          icon={<FontAwesomeIcon icon={faTachometerAlt} />} 
-          text="Dashboard" 
-          active={isActive(getDashboardPath())} 
-          onClick={() => handleNavigation(getDashboardPath())} 
-        />
+        {user?.role === 'mentor' && (
+          <NavItem 
+            icon={<FontAwesomeIcon icon={faTachometerAlt} />} 
+            text="Dashboard" 
+            active={isActive('/mentor-dashboard')} 
+            onClick={() => handleNavigation('/mentor-dashboard')} 
+          />
+        )}
         <NavItem 
           icon={<FontAwesomeIcon icon={faChalkboardTeacher} />} 
           text="Mentors" 
@@ -190,12 +185,14 @@ const Header = () => {
               active={isActive('/')} 
               onClick={() => handleNavigation('/')} 
             />
-            <MobileNavItem 
-              icon={<FontAwesomeIcon icon={faTachometerAlt} />} 
-              text="Dashboard" 
-              active={isActive(getDashboardPath())} 
-              onClick={() => handleNavigation(getDashboardPath())} 
-            />
+            {user?.role === 'mentor' && (
+              <MobileNavItem 
+                icon={<FontAwesomeIcon icon={faTachometerAlt} />} 
+                text="Dashboard" 
+                active={isActive('/mentor-dashboard')} 
+                onClick={() => handleNavigation('/mentor-dashboard')} 
+              />
+            )}
             <MobileNavItem 
               icon={<FontAwesomeIcon icon={faChalkboardTeacher} />} 
               text="Mentors" 
