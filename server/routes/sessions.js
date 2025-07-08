@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const Session = require('../models/Session');
 const Mentor = require('../models/Mentor');
 const { auth } = require('../middleware/auth');
+const { createNotification } = require('./notifications');
 
 const router = express.Router();
 
@@ -44,6 +45,27 @@ router.post('/', auth, [
     });
 
     await session.save();
+
+    // Create notification for mentor
+    await createNotification(
+      mentorId,
+      req.user.id,
+      'session_request',
+      'New Session Request',
+      `You have a new session request from ${req.user.firstName} ${req.user.lastName}`,
+      { sessionId: session._id, title, scheduledAt }
+    );
+
+    // Emit real-time notification
+    const io = req.app.get('io');
+    if (io) {
+      io.to(mentorId).emit('new-notification', {
+        type: 'session_request',
+        title: 'New Session Request',
+        message: `You have a new session request from ${req.user.firstName} ${req.user.lastName}`,
+        data: { sessionId: session._id, title, scheduledAt }
+      });
+    }
 
     const populatedSession = await Session.findById(session._id)
       .populate('mentee', 'firstName lastName profileImage')
@@ -205,6 +227,27 @@ router.put('/:id/status', auth, [
          select: 'firstName lastName'
        }
      });
+
+    // Create notification for mentor
+    await createNotification(
+      session.mentor,
+      req.user.id,
+      'session_status_update',
+      'Session Status Updated',
+      `Your session status has been updated to ${status}`,
+      { sessionId: session._id, status, cancellationReason }
+    );
+
+    // Emit real-time notification
+    const io = req.app.get('io');
+    if (io) {
+      io.to(session.mentor).emit('new-notification', {
+        type: 'session_status_update',
+        title: 'Session Status Updated',
+        message: `Your session status has been updated to ${status}`,
+        data: { sessionId: session._id, status, cancellationReason }
+      });
+    }
 
     res.json({
       message: 'Session status updated successfully',

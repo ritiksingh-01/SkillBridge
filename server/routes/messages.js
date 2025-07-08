@@ -28,6 +28,11 @@ router.post('/', auth, [
       return res.status(404).json({ message: 'Session not found' });
     }
 
+    // Check if user is part of the session
+    if (session.mentor.toString() !== req.user.id && session.mentee.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Access denied to this session' });
+    }
+
     const message = new Message({
       session: sessionId,
       sender: req.user.id,
@@ -46,7 +51,15 @@ router.post('/', auth, [
     // Emit socket event for real-time messaging
     const io = req.app.get('io');
     if (io) {
+      // Emit to the session room
       io.to(sessionId).emit('new-message', populatedMessage);
+      
+      // Also emit to the receiver's personal room for notifications
+      io.to(receiverId).emit('new-message-notification', {
+        message: populatedMessage,
+        sessionId,
+        sender: populatedMessage.sender
+      });
     }
 
     res.status(201).json({

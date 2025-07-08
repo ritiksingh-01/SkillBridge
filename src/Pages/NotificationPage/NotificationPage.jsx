@@ -30,8 +30,9 @@ const NotificationPage = () => {
   const [selectedNotifications, setSelectedNotifications] = useState([]);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'compact'
   const [showActions, setShowActions] = useState(false);
-  const socket = useSocket();
-  const [userId, setUserId] = useState(null); // Replace with actual user ID from auth context
+  const { socket, isConnected } = useSocket();
+  const [userId, setUserId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   const [notifications, setNotifications] = useState([
     {
@@ -136,22 +137,33 @@ const NotificationPage = () => {
   // Fetch notifications from backend
   useEffect(() => {
     if (userId) {
-      notificationsAPI.getAll().then(res => {
-        if (res.data && Array.isArray(res.data.data.notifications)) {
-          setNotifications(res.data.data.notifications.map(notif => ({
-            ...notif,
-            time: formatTimeAgo(new Date(notif.createdAt)),
-            timestamp: new Date(notif.createdAt)
-          })));
-        }
-      });
+      setIsLoading(true);
+      notificationsAPI.getAll()
+        .then(res => {
+          if (res.data && Array.isArray(res.data.notifications)) {
+            setNotifications(res.data.notifications.map(notif => ({
+              ...notif,
+              time: formatTimeAgo(new Date(notif.createdAt)),
+              timestamp: new Date(notif.createdAt)
+            })));
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching notifications:', error);
+          // Keep existing notifications if API fails
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
     }
   }, [userId]);
 
   // Listen for real-time notifications
   useEffect(() => {
     if (!socket || !userId) return;
+    
     const handleNewNotification = (notif) => {
+      console.log('🔔 Received new notification:', notif);
       setNotifications(prev => ([
         {
           ...notif,
@@ -161,9 +173,31 @@ const NotificationPage = () => {
         ...prev
       ]));
     };
+
+    const handleMessageNotification = (data) => {
+      console.log('📨 Received message notification:', data);
+      const messageNotif = {
+        id: Date.now(),
+        type: 'message',
+        title: 'New Message',
+        message: `${data.sender.firstName} ${data.sender.lastName} sent you a message`,
+        time: 'Just now',
+        timestamp: new Date(),
+        isRead: false,
+        avatar: `${data.sender.firstName?.[0]}${data.sender.lastName?.[0]}`,
+        priority: 'medium',
+        category: 'Messages',
+        actionRequired: false
+      };
+      setNotifications(prev => ([messageNotif, ...prev]));
+    };
+
     socket.on('new-notification', handleNewNotification);
+    socket.on('new-message-notification', handleMessageNotification);
+    
     return () => {
       socket.off('new-notification', handleNewNotification);
+      socket.off('new-message-notification', handleMessageNotification);
     };
   }, [socket, userId]);
 

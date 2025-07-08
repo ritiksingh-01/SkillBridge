@@ -271,8 +271,10 @@ const MessagePage = () => {
   const [activeTab, setActiveTab] = useState('query'); // Fixed: Added state for tab switching
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
-  const socket = useSocket();
-  const [userId, setUserId] = useState(null); // Replace with actual user ID from auth context
+  const { socket, isConnected, joinRoom, leaveRoom, sendMessage } = useSocket();
+  const [userId, setUserId] = useState(null);
+  const [currentSessionId, setCurrentSessionId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Mock mentors data
   const mentors = [
@@ -352,31 +354,52 @@ const MessagePage = () => {
   // Fetch messages from backend when mentor is selected
   useEffect(() => {
     if (selectedMentor && userId) {
-      // Join room for this user-mentor pair
-      const roomId = [userId, selectedMentor.id].sort().join('-');
-      if (socket) {
-        socket.emit('join-room', roomId);
-      }
+      setIsLoading(true);
+      
+      // Create or get session ID for this user-mentor pair
+      const sessionId = `session_${[userId, selectedMentor.id].sort().join('_')}`;
+      setCurrentSessionId(sessionId);
+      
+      // Join room for this session
+      joinRoom(sessionId);
+      
       // Fetch messages from backend
-      messagesAPI.getBySession(roomId).then(res => {
-        if (res.data && Array.isArray(res.data.data)) {
-          setQueryMessages(res.data.data.map(msg => ({
-            id: msg._id,
-            type: msg.sender === userId ? 'query' : 'response',
-            text: msg.content,
-            timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            status: msg.sender === userId ? 'sent' : 'received',
-          })));
-        }
-      });
+      messagesAPI.getBySession(sessionId)
+        .then(res => {
+          if (res.data && Array.isArray(res.data.messages)) {
+            setQueryMessages(res.data.messages.map(msg => ({
+              id: msg._id,
+              type: msg.sender === userId ? 'query' : 'response',
+              text: msg.content,
+              timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              status: msg.sender === userId ? 'sent' : 'received',
+            })));
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching messages:', error);
+          // Keep existing messages if API fails
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
     }
-  }, [selectedMentor, userId, socket]);
+    
+    // Cleanup: leave room when mentor changes
+    return () => {
+      if (currentSessionId) {
+        leaveRoom(currentSessionId);
+      }
+    };
+  }, [selectedMentor, userId, joinRoom, leaveRoom]);
 
   // Listen for incoming messages
   useEffect(() => {
     if (!socket) return;
+    
     const handleReceiveMessage = (data) => {
-      if (selectedMentor && data.roomId === [userId, selectedMentor.id].sort().join('-')) {
+      console.log('📨 Received message:', data);
+      if (currentSessionId && data.session === currentSessionId) {
         setQueryMessages(prev => ([
           ...prev,
           {
@@ -389,11 +412,19 @@ const MessagePage = () => {
         ]));
       }
     };
+
+    const handleMessageSent = (data) => {
+      console.log('✅ Message sent confirmation:', data);
+    };
+
     socket.on('receive-message', handleReceiveMessage);
+    socket.on('message-sent', handleMessageSent);
+    
     return () => {
       socket.off('receive-message', handleReceiveMessage);
+      socket.off('message-sent', handleMessageSent);
     };
-  }, [socket, selectedMentor, userId]);
+  }, [socket, currentSessionId, userId]);
 
   // Filter mentors based on search and status
   const filteredMentors = mentors.filter(mentor => {
@@ -405,32 +436,39 @@ const MessagePage = () => {
 
   // Send message via socket and API
   const handleSendMessage = async () => {
-    if (message.trim() && questionCount < 2 && selectedMentor && userId) {
-      const roomId = [userId, selectedMentor.id].sort().join('-');
-      const newMessage = {
-        roomId,
-        sender: userId,
-        receiver: selectedMentor.id,
+    if (message.trim() && questionCount < 2 && selectedMentor && userId && currentSessionId) {
+      const messageData = {
+        sessionId: currentSessionId,
         content: message,
+        receiverId: selectedMentor.id,
+        messageType: 'text'
       };
-      // Send via socket
-      if (socket) {
-        socket.emit('send-message', newMessage);
-      }
-      // Save to backend
-      await messagesAPI.send(newMessage);
-      setQueryMessages(prev => ([
-        ...prev,
-        {
-          id: Date.now(),
-          type: 'query',
-          text: message,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          status: 'sent',
+
+      try {
+        // Send via API first
+        const response = await messagesAPI.send(messageData);
+        
+        if (response.data && response.data.data) {
+          // Add message to local state
+          setQueryMessages(prev => ([
+            ...prev,
+            {
+              id: response.data.data._id || Date.now(),
+              type: 'query',
+              text: message,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              status: 'sent',
+            }
+          ]));
+          
+          setMessage('');
+          setQuestionCount(prev => prev + 1);
         }
-      ]));
-      setMessage('');
-      setQuestionCount(prev => prev + 1);
+      } catch (error) {
+        console.error('Error sending message:', error);
+        // Show error message to user
+        alert('Failed to send message. Please try again.');
+      }
     }
   };
 

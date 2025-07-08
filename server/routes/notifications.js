@@ -117,22 +117,39 @@ router.delete('/:id', auth, async (req, res) => {
 // @access  Private
 router.post('/', auth, async (req, res) => {
   try {
+    const { recipient, type, title, message, data = {} } = req.body;
+
+    if (!recipient || !type || !title || !message) {
+      return res.status(400).json({ 
+        message: 'Recipient, type, title, and message are required' 
+      });
+    }
+
     const notification = new Notification({
-      ...req.body,
-      recipient: req.body.recipient || req.user.id,
-      sender: req.user.id
+      recipient,
+      sender: req.user.id,
+      type,
+      title,
+      message,
+      data
     });
+
     await notification.save();
+
+    // Populate sender information
+    const populatedNotification = await Notification.findById(notification._id)
+      .populate('sender', 'firstName lastName profileImage');
 
     // Emit real-time notification to recipient
     const io = req.app.get('io');
     if (io) {
-      io.to(notification.recipient.toString()).emit('new-notification', notification);
+      console.log(`🔔 Emitting notification to user ${recipient}`);
+      io.to(recipient.toString()).emit('new-notification', populatedNotification);
     }
 
     res.status(201).json({
       message: 'Notification created successfully',
-      notification
+      notification: populatedNotification
     });
   } catch (error) {
     console.error('Create notification error:', error);
@@ -140,4 +157,24 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-module.exports = router;
+// Helper function to create notifications from other routes
+const createNotification = async (recipient, sender, type, title, message, data = {}) => {
+  try {
+    const notification = new Notification({
+      recipient,
+      sender,
+      type,
+      title,
+      message,
+      data
+    });
+
+    await notification.save();
+    return notification;
+  } catch (error) {
+    console.error('Error creating notification:', error);
+    return null;
+  }
+};
+
+module.exports = { router, createNotification };

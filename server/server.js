@@ -86,9 +86,13 @@ mongoose.connection.on('disconnected', () => {
 io.on('connection', (socket) => {
   console.log('👤 User connected:', socket.id);
 
+  // Store user information in socket
+  socket.userId = null;
+
   // Listen for user ID to join their personal room
   socket.on('join-user-room', (userId) => {
     if (userId) {
+      socket.userId = userId;
       socket.join(userId);
       console.log(`🔔 User ${userId} joined their notification room`);
     }
@@ -98,13 +102,63 @@ io.on('connection', (socket) => {
     socket.join(roomId);
     console.log(`🏠 User ${socket.id} joined room ${roomId}`);
   });
+
+  socket.on('leave-room', (roomId) => {
+    socket.leave(roomId);
+    console.log(`🚪 User ${socket.id} left room ${roomId}`);
+  });
   
   socket.on('send-message', (data) => {
+    console.log('📤 Message received:', data);
+    
+    // Broadcast to the room
     socket.to(data.roomId).emit('receive-message', data);
+    
+    // Also emit to sender for confirmation
+    socket.emit('message-sent', data);
+  });
+
+  // Handle typing indicators
+  socket.on('typing-start', (data) => {
+    socket.to(data.roomId).emit('user-typing', {
+      userId: socket.userId,
+      roomId: data.roomId
+    });
+  });
+
+  socket.on('typing-stop', (data) => {
+    socket.to(data.roomId).emit('user-stop-typing', {
+      userId: socket.userId,
+      roomId: data.roomId
+    });
+  });
+
+  // Handle online/offline status
+  socket.on('user-online', (userId) => {
+    socket.userId = userId;
+    socket.broadcast.emit('user-status-change', {
+      userId,
+      status: 'online'
+    });
+  });
+
+  socket.on('user-offline', (userId) => {
+    socket.broadcast.emit('user-status-change', {
+      userId,
+      status: 'offline'
+    });
   });
   
   socket.on('disconnect', () => {
     console.log('👋 User disconnected:', socket.id);
+    
+    // Notify others that user is offline
+    if (socket.userId) {
+      socket.broadcast.emit('user-status-change', {
+        userId: socket.userId,
+        status: 'offline'
+      });
+    }
   });
 });
 
@@ -114,7 +168,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/mentors', require('./routes/mentors'));
 app.use('/api/sessions', require('./routes/sessions'));
 app.use('/api/messages', require('./routes/messages'));
-app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/notifications', require('./routes/notifications').router);
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/reviews', require('./routes/reviews'));
 
@@ -227,8 +281,6 @@ server.listen(PORT, () => {
   console.log(`📱 Socket.io server ready for connections`);
   console.log(`🌐 API Base URL: http://localhost:${PORT}/api`);
   console.log(`🔍 Health Check: http://localhost:${PORT}/api/health`);
-  console.log(`🧪 Test API: http://localhost:${PORT}/api/test`);
-  console.log(`💾 Test DB: http://localhost:${PORT}/api/test-db`);
 });
 
 module.exports = { app, io };

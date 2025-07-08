@@ -1,17 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHome, faChalkboardTeacher, faEnvelope, faBell, faUser, faCog, faQuestionCircle, faSignOutAlt, faBars, faTimes, faChevronDown, faSearch, faTachometerAlt } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
+  const [user, setUser] = useState(null);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const { isConnected, connectionError } = useSocket();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, isAuthenticated } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(prev => !prev);
@@ -32,6 +43,8 @@ const Header = () => {
   const handleLogout = async () => {
     try {
       await logout();
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
