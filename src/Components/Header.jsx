@@ -18,7 +18,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import { motion, AnimatePresence } from 'framer-motion';
+// Removed framer-motion imports to fix FontAwesome icon issues
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -100,39 +100,39 @@ const Header = () => {
           onClick={toggleMobileMenu}
           aria-label="Toggle menu"
         >
-          {mobileMenuOpen ? <FontAwesomeIcon icon={faTimes} size="lg" /> : <FontAwesomeIcon icon={faBars} size="lg" />}
+          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
       </div>
 
       <nav className="hidden md:flex items-center space-x-2">
         <NavItem 
-          icon={<FontAwesomeIcon icon={faHome} />} 
+          icon={<Home className="w-4 h-4" />} 
           text="Home" 
           active={isActive('/')} 
           onClick={() => handleNavigation('/')} 
         />
         {user?.role === 'mentor' && (
           <NavItem 
-            icon={<FontAwesomeIcon icon={faTachometerAlt} />} 
+            icon={<BarChart3 className="w-4 h-4" />} 
             text="Dashboard" 
             active={isActive('/mentor-dashboard')} 
             onClick={() => handleNavigation('/mentor-dashboard')} 
           />
         )}
         <NavItem 
-          icon={<FontAwesomeIcon icon={faChalkboardTeacher} />} 
+          icon={<Users className="w-4 h-4" />} 
           text="Mentors" 
           active={isActive('/findMentorPage')} 
           onClick={() => handleNavigation('/findMentorPage')} 
         />
         <NavItem 
-          icon={<FontAwesomeIcon icon={faEnvelope} />} 
+          icon={<MessageSquare className="w-4 h-4" />} 
           text="Messages" 
           active={isActive('/message')} 
           onClick={() => handleNavigation('/message')} 
         />
         <NavItem 
-          icon={<FontAwesomeIcon icon={faBell} />} 
+          icon={<Bell className="w-4 h-4" />} 
           text="Notifications" 
           active={isActive('/notifications')} 
           onClick={() => handleNavigation('/notifications')} 
@@ -153,7 +153,7 @@ const Header = () => {
             </div>
             <div className="flex items-center mt-1 select-none">
               <span className="text-xs font-medium text-gray-500">{user?.firstName?.toUpperCase() || 'USER'}</span>
-              <FontAwesomeIcon icon={faChevronDown} className="text-gray-500 ml-1" />
+              <ChevronDown className="w-3 h-3 text-gray-500 ml-1" />
             </div>
           </div>
 
@@ -165,23 +165,23 @@ const Header = () => {
                 <div className="text-xs text-blue-600 capitalize">{user?.role}</div>
               </div>
               <ProfileMenuItem 
-                icon={<FontAwesomeIcon icon={faUser} />} 
+                icon={<User className="w-4 h-4" />} 
                 text="View Profile" 
                 onClick={() => handleNavigation(getProfilePath())} 
               />
               <ProfileMenuItem 
-                icon={<FontAwesomeIcon icon={faCog} />} 
+                icon={<Settings className="w-4 h-4" />} 
                 text="Settings" 
                 onClick={() => handleNavigation('/settings')} 
               />
               <ProfileMenuItem 
-                icon={<FontAwesomeIcon icon={faQuestionCircle} />} 
+                icon={<HelpCircle className="w-4 h-4" />} 
                 text="Help" 
                 onClick={() => handleNavigation('/help')} 
               />
               <div className="border-t border-gray-100 my-1"></div>
               <ProfileMenuItem 
-                icon={<FontAwesomeIcon icon={faSignOutAlt} />} 
+                icon={<LogOut className="w-4 h-4" />} 
                 text="Logout" 
                 onClick={handleLogout} 
               />
@@ -195,7 +195,7 @@ const Header = () => {
           <div className="p-3">
             <div className="relative w-full">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FontAwesomeIcon icon={faSearch} size="lg" className="text-gray-500" />
+                <Search className="w-4 h-4 text-gray-500" />
               </div>
               <input
                 type="text"
@@ -208,58 +208,58 @@ const Header = () => {
           </div>
           <div className="flex flex-col py-2">
             <MobileNavItem 
-              icon={<FontAwesomeIcon icon={faHome} />} 
+              icon={<Home className="w-4 h-4" />} 
               text="Home" 
               active={isActive('/')} 
               onClick={() => handleNavigation('/')} 
             />
             {user?.role === 'mentor' && (
               <MobileNavItem 
-                icon={<FontAwesomeIcon icon={faTachometerAlt} />} 
+                icon={<BarChart3 className="w-4 h-4" />} 
                 text="Dashboard" 
                 active={isActive('/mentor-dashboard')} 
                 onClick={() => handleNavigation('/mentor-dashboard')} 
               />
             )}
             <MobileNavItem 
-              icon={<FontAwesomeIcon icon={faChalkboardTeacher} />} 
+              icon={<Users className="w-4 h-4" />} 
               text="Mentors" 
               active={isActive('/findMentorPage')} 
               onClick={() => handleNavigation('/findMentorPage')} 
             />
             <MobileNavItem 
-              icon={<FontAwesomeIcon icon={faEnvelope} />} 
+              icon={<MessageSquare className="w-4 h-4" />} 
               text="Messages" 
               active={isActive('/message')} 
               onClick={() => handleNavigation('/message')} 
             />
             <MobileNavItem 
-              icon={<FontAwesomeIcon icon={faBell} />} 
+              icon={<Bell className="w-4 h-4" />} 
               text="Notifications" 
               active={isActive('/notifications')} 
               onClick={() => handleNavigation('/notifications')} 
             />
             <div className="border-t border-gray-100 my-2"></div>
             <MobileNavItem 
-              icon={<FontAwesomeIcon icon={faUser} />} 
+              icon={<User className="w-4 h-4" />} 
               text="View Profile" 
               active={isActive(getProfilePath())} 
               onClick={() => handleNavigation(getProfilePath())} 
             />
             <MobileNavItem 
-              icon={<FontAwesomeIcon icon={faCog} />} 
+              icon={<Settings className="w-4 h-4" />} 
               text="Settings" 
               active={isActive('/settings')} 
               onClick={() => handleNavigation('/settings')} 
             />
             <MobileNavItem 
-              icon={<FontAwesomeIcon icon={faQuestionCircle} />} 
+              icon={<HelpCircle className="w-4 h-4" />} 
               text="Help" 
               active={isActive('/help')} 
               onClick={() => handleNavigation('/help')} 
             />
             <MobileNavItem 
-              icon={<FontAwesomeIcon icon={faSignOutAlt} />} 
+              icon={<LogOut className="w-4 h-4" />} 
               text="Logout" 
               active={false} 
               onClick={handleLogout} 
@@ -300,7 +300,7 @@ const MobileNavItem = ({ icon, text, active, onClick }) => {
 const ProfileMenuItem = ({ icon, text, onClick }) => {
   return (
     <div className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer" onClick={onClick}>
-      <span className="mr-2 text-gray-500">{icon}</span>
+      <span className="mr-3 text-gray-500">{icon}</span>
       {text}
     </div>
   );

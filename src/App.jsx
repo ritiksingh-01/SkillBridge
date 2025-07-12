@@ -12,7 +12,7 @@ import NotificationPage from './Pages/NotificationPage/NotificationPage';
 import BecomeMentorPage from './Pages/BecomeMentorPage/BecomeMentorPage';
 import MentorDashboard from './Pages/MentorDashboard/MentorDashboard';
 import MentorProfilePage from './Pages/MentorProfilePage/MentorProfilePage';
-import EnhancedHeader from './Components/EnhancedHeader';
+import ProfessionalHeader from './Components/ProfessionalHeader';
 
 const router = createBrowserRouter([
   {
