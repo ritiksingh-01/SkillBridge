@@ -11,7 +11,12 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: [
+      process.env.CLIENT_URL || "http://localhost:5173",
+      "https://localhost:5173",
+      /^https:\/\/.*\.webcontainer-api\.io$/,
+      /^https:\/\/.*\.local-credentialless\.webcontainer-api\.io$/
+    ],
     methods: ["GET", "POST"]
   }
 });
@@ -21,7 +26,11 @@ app.use(helmet());
 app.use(cors({
   origin: [
     "https://skill-bridge-sage.vercel.app",
-    "http://localhost:5173"
+    "http://localhost:5173",
+    "https://localhost:5173",
+    process.env.CLIENT_URL || "http://localhost:5173",
+    /^https:\/\/.*\.webcontainer-api\.io$/,
+    /^https:\/\/.*\.local-credentialless\.webcontainer-api\.io$/
   ],
   credentials: true
 }));
