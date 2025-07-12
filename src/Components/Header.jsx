@@ -1,9 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHome, faChalkboardTeacher, faEnvelope, faBell, faUser, faCog, faQuestionCircle, faSignOutAlt, faBars, faTimes, faChevronDown, faSearch, faTachometerAlt } from '@fortawesome/free-solid-svg-icons';
+import { 
+  Home, 
+  Users, 
+  MessageSquare, 
+  Bell, 
+  User, 
+  Settings, 
+  HelpCircle, 
+  LogOut, 
+  Menu, 
+  X, 
+  ChevronDown, 
+  Search, 
+  BarChart3,
+  Sparkles
+} from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

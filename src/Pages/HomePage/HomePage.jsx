@@ -16,132 +16,458 @@ import {
   Tag,
   Menu,
   X,
-  ChevronDown
+  ChevronDown,
+  Star,
+  Users,
+  TrendingUp,
+  BookOpen,
+  Target,
+  Shield,
+  Sparkles,
+  ChevronRight
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Canvas } from "@react-three/fiber";
-import { Float, PresentationControls, Environment } from "@react-three/drei";
-import HeroSection from "../../Components/HeroSection";
-import PopularMentorsSection from "../../Components/PopularMentorsSection";
-import TestimonialSlider from "../../Components/TestimonialSlider";
-import FAQSection from "../../Components/FAQSection";
-import NewsletterSignup from "../../Components/NewsletterSignup";
-import LogoCarousel from "../../Components/LogoCarousel";
-import HowItWorksSection from "../../Components/HowItWorksSection";
-import Footer from "../../Components/Footer";
 import Header from "../../Components/Header";
+import Footer from "../../Components/Footer";
 import { useAuth } from "../../context/AuthContext";
 
-// Animated 3D Model Component
-const Model3D = () => {
-  return (
-    <Canvas dpr={[1, 2]} camera={{ position: [0, 0, 5], fov: 45 }}>
-      <ambientLight intensity={0.5} />
-      <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} />
-      <PresentationControls 
-        global 
-        zoom={0.8} 
-        rotation={[0, -Math.PI / 4, 0]} 
-        polar={[-Math.PI / 4, Math.PI / 4]} 
-        azimuth={[-Math.PI / 4, Math.PI / 4]}
-      >
-        <Float rotationIntensity={0.4}>
-          <mesh>
-            <torusKnotGeometry args={[1.4, 0.5, 128, 32]} />
-            <meshPhongMaterial color="#3B82F6" shininess={100} />
-          </mesh>
-        </Float>
-      </PresentationControls>
-      <Environment preset="city" />
-    </Canvas>
-  );
-};
+// Enhanced Hero Section Component
+const EnhancedHeroSection = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const [currentSlide, setCurrentSlide] = useState(0);
 
-// Modern Category Card with Hover Effects
-const ModernCategoryCard = ({ icon, title, mentorsCount, color, isSpecial }) => {
-  return (
-    <motion.div 
-      className={`relative overflow-hidden rounded-xl p-6 ${color} group cursor-pointer`}
-      whileHover={{ scale: 1.03, y: -5 }}
-      transition={{ type: "spring", stiffness: 400, damping: 17 }}
-    >
-      <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-all duration-700" />
-      
-      <div className="relative z-10">
-        <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-white shadow-md">
-          {icon}
-        </div>
-        
-        <h3 className="text-xl font-bold mb-2">{title}</h3>
-        <p className="text-gray-600 mb-4">{mentorsCount}</p>
-        
-        {isSpecial ? (
-          <motion.div 
-            className="flex items-center gap-2 text-blue-600 font-medium"
-            whileHover={{ x: 5 }}
-          >
-            Explore all <ArrowRight className="w-4 h-4" />
-          </motion.div>
-        ) : (
-          <motion.div 
-            className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-md cursor-pointer"
-            whileHover={{ x: 5 }}
-          >
-            <ArrowRight className="w-4 h-4 text-blue-600" />
-          </motion.div>
-        )}
-      </div>
-    </motion.div>
-  );
-};
-
-// Animated Stat Card Component
-const StatCard = ({ value, label, description }) => {
-  const [isInView, setIsInView] = useState(false);
-  const ref = useRef();
+  const heroSlides = [
+    {
+      title: "Accelerate Your Career",
+      subtitle: "With Expert Mentorship",
+      description: "Connect with industry leaders and unlock your potential through personalized guidance",
+      cta: "Find Your Mentor",
+      image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      title: "Share Your Expertise",
+      subtitle: "Become a Mentor",
+      description: "Guide the next generation of professionals and build your personal brand",
+      cta: "Start Mentoring",
+      image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=800&q=80"
+    }
+  ];
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.3 }
-    );
-    
-    if (ref.current) {
-      observer.observe(ref.current);
-    }
-    
-    return () => {
-      if (ref.current) {
-        observer.disconnect();
-      }
-    };
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 5000);
+    return () => clearInterval(timer);
   }, []);
 
+  const handleCTA = () => {
+    if (currentSlide === 0) {
+      navigate('/findMentorPage');
+    } else {
+      navigate('/becomeMentor');
+    }
+  };
+
   return (
-    <motion.div 
-      ref={ref}
-      className="bg-white/10 backdrop-blur-xl p-8 rounded-2xl border border-white/20 hover:bg-white/15 transition-all"
-      initial={{ opacity: 0, y: 20 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-      transition={{ duration: 0.6 }}
-    >
-      <motion.div 
-        className="text-5xl font-bold text-white mb-2"
-        initial={{ opacity: 0 }}
-        animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-        transition={{ duration: 0.8, delay: 0.3 }}
-      >
-        {value}
-      </motion.div>
-      <div className="text-xl font-semibold text-blue-200 mb-3">{label}</div>
-      <p className="text-blue-100">{description}</p>
-    </motion.div>
+    <div className="relative min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/5 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 pt-32 pb-20">
+        <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[600px]">
+          {/* Left Content */}
+          <motion.div 
+            className="text-white space-y-8"
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className="space-y-4">
+              <motion.div 
+                className="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Sparkles className="w-4 h-4 mr-2 text-yellow-400" />
+                <span className="text-sm font-medium">Trusted by 50,000+ professionals</span>
+              </motion.div>
+
+              <motion.h1 
+                className="text-5xl lg:text-7xl font-bold leading-tight"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                {heroSlides[currentSlide].title}
+                <br />
+                <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
+                  {heroSlides[currentSlide].subtitle}
+                </span>
+              </motion.h1>
+
+              <motion.p 
+                className="text-xl text-blue-100 leading-relaxed max-w-lg"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                {heroSlides[currentSlide].description}
+              </motion.p>
+            </div>
+
+            <motion.div 
+              className="flex flex-col sm:flex-row gap-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              <button 
+                onClick={handleCTA}
+                className="group px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-semibold rounded-xl hover:shadow-2xl hover:shadow-yellow-500/25 transition-all duration-300 transform hover:scale-105 flex items-center justify-center"
+              >
+                <span>{heroSlides[currentSlide].cta}</span>
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+              </button>
+              
+              <button className="group px-8 py-4 bg-white/10 backdrop-blur-md border border-white/20 text-white font-semibold rounded-xl hover:bg-white/20 transition-all duration-300 flex items-center justify-center">
+                <Play className="w-5 h-5 mr-2" />
+                <span>Watch Demo</span>
+              </button>
+            </motion.div>
+
+            {/* Stats */}
+            <motion.div 
+              className="grid grid-cols-3 gap-8 pt-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+            >
+              {[
+                { number: "50K+", label: "Active Users" },
+                { number: "5K+", label: "Expert Mentors" },
+                { number: "98%", label: "Success Rate" }
+              ].map((stat, index) => (
+                <div key={index} className="text-center">
+                  <div className="text-3xl font-bold text-white">{stat.number}</div>
+                  <div className="text-blue-200 text-sm">{stat.label}</div>
+                </div>
+              ))}
+            </motion.div>
+          </motion.div>
+
+          {/* Right Content - Image */}
+          <motion.div 
+            className="relative"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-orange-500/20 rounded-3xl blur-xl"></div>
+              <img 
+                src={heroSlides[currentSlide].image}
+                alt="Hero"
+                className="relative z-10 w-full h-[500px] object-cover rounded-3xl shadow-2xl"
+              />
+              
+              {/* Floating Cards */}
+              <motion.div 
+                className="absolute -top-4 -left-4 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl"
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 3, repeat: Infinity }}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-gray-900">Session Completed</div>
+                    <div className="text-sm text-gray-600">with Sarah Johnson</div>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div 
+                className="absolute -bottom-4 -right-4 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl"
+                animate={{ y: [0, 10, 0] }}
+                transition={{ duration: 3, repeat: Infinity, delay: 1.5 }}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Star className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-gray-900">4.9/5 Rating</div>
+                    <div className="text-sm text-gray-600">from 1,200+ reviews</div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Slide Indicators */}
+        <div className="flex justify-center space-x-2 mt-12">
+          {heroSlides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                index === currentSlide ? 'bg-yellow-400 w-8' : 'bg-white/30'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Enhanced Features Section
+const FeaturesSection = () => {
+  const features = [
+    {
+      icon: <Users className="w-8 h-8" />,
+      title: "Expert Mentors",
+      description: "Connect with industry leaders from top companies worldwide",
+      color: "from-blue-500 to-blue-600"
+    },
+    {
+      icon: <Calendar className="w-8 h-8" />,
+      title: "Flexible Scheduling",
+      description: "Book sessions that fit your schedule with real-time availability",
+      color: "from-green-500 to-green-600"
+    },
+    {
+      icon: <Shield className="w-8 h-8" />,
+      title: "Secure Platform",
+      description: "Enterprise-grade security with encrypted communications",
+      color: "from-purple-500 to-purple-600"
+    },
+    {
+      icon: <TrendingUp className="w-8 h-8" />,
+      title: "Track Progress",
+      description: "Monitor your growth with detailed analytics and insights",
+      color: "from-orange-500 to-orange-600"
+    }
+  ];
+
+  return (
+    <div className="py-24 bg-white">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <motion.div 
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
+            Why Choose SkillBridge?
+          </h2>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            We provide everything you need to accelerate your career growth through meaningful mentorship connections
+          </p>
+        </motion.div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {features.map((feature, index) => (
+            <motion.div
+              key={index}
+              className="group relative p-8 bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-xl transition-all duration-300"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ y: -5 }}
+            >
+              <div className={`inline-flex p-3 rounded-xl bg-gradient-to-r ${feature.color} text-white mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                {feature.icon}
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">{feature.title}</h3>
+              <p className="text-gray-600 leading-relaxed">{feature.description}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Enhanced Categories Section
+const CategoriesSection = () => {
+  const categories = [
+    { name: "Technology", count: "2,500+", icon: <PanelLeft className="w-6 h-6" />, color: "bg-blue-500" },
+    { name: "Business", count: "1,800+", icon: <Briefcase className="w-6 h-6" />, color: "bg-green-500" },
+    { name: "Design", count: "1,200+", icon: <Tag className="w-6 h-6" />, color: "bg-purple-500" },
+    { name: "Marketing", count: "900+", icon: <BarChart className="w-6 h-6" />, color: "bg-orange-500" },
+    { name: "Data Science", count: "800+", icon: <Zap className="w-6 h-6" />, color: "bg-red-500" },
+    { name: "Leadership", count: "600+", icon: <Award className="w-6 h-6" />, color: "bg-indigo-500" }
+  ];
+
+  return (
+    <div className="py-24 bg-gray-50">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <motion.div 
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
+            Explore by Category
+          </h2>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Find mentors across diverse fields and industries
+          </p>
+        </motion.div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {categories.map((category, index) => (
+            <motion.div
+              key={index}
+              className="group p-6 bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all duration-300 cursor-pointer"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ y: -3 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className={`p-3 rounded-xl ${category.color} text-white group-hover:scale-110 transition-transform duration-300`}>
+                  {category.icon}
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all duration-300" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">{category.name}</h3>
+              <p className="text-gray-600">{category.count} mentors available</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Enhanced Testimonials Section
+const TestimonialsSection = () => {
+  const testimonials = [
+    {
+      name: "Sarah Chen",
+      role: "Product Manager at Google",
+      image: "https://randomuser.me/api/portraits/women/1.jpg",
+      content: "SkillBridge connected me with an amazing mentor who helped me transition from engineering to product management. The guidance was invaluable!",
+      rating: 5
+    },
+    {
+      name: "Michael Rodriguez",
+      role: "Software Engineer at Microsoft",
+      image: "https://randomuser.me/api/portraits/men/2.jpg",
+      content: "The mentorship I received helped me level up my technical skills and land my dream job. Highly recommend this platform!",
+      rating: 5
+    },
+    {
+      name: "Emily Johnson",
+      role: "UX Designer at Airbnb",
+      image: "https://randomuser.me/api/portraits/women/3.jpg",
+      content: "Amazing platform with top-quality mentors. The sessions were structured and incredibly helpful for my career growth.",
+      rating: 5
+    }
+  ];
+
+  return (
+    <div className="py-24 bg-gradient-to-br from-blue-900 to-indigo-900">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <motion.div 
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
+            Success Stories
+          </h2>
+          <p className="text-xl text-blue-200 max-w-3xl mx-auto">
+            Hear from professionals who transformed their careers with SkillBridge
+          </p>
+        </motion.div>
+
+        <div className="grid md:grid-cols-3 gap-8">
+          {testimonials.map((testimonial, index) => (
+            <motion.div
+              key={index}
+              className="p-8 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 hover:bg-white/20 transition-all duration-300"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.2 }}
+            >
+              <div className="flex items-center mb-4">
+                {[...Array(testimonial.rating)].map((_, i) => (
+                  <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
+                ))}
+              </div>
+              <p className="text-white mb-6 leading-relaxed">"{testimonial.content}"</p>
+              <div className="flex items-center">
+                <img 
+                  src={testimonial.image} 
+                  alt={testimonial.name}
+                  className="w-12 h-12 rounded-full mr-4"
+                />
+                <div>
+                  <div className="font-semibold text-white">{testimonial.name}</div>
+                  <div className="text-blue-200 text-sm">{testimonial.role}</div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Enhanced CTA Section
+const CTASection = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="py-24 bg-gradient-to-r from-yellow-400 to-orange-500">
+      <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <h2 className="text-4xl lg:text-5xl font-bold text-black mb-6">
+            Ready to Accelerate Your Career?
+          </h2>
+          <p className="text-xl text-black/80 mb-8 max-w-2xl mx-auto">
+            Join thousands of professionals who are already growing with SkillBridge
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button 
+              onClick={() => navigate('/findMentorPage')}
+              className="px-8 py-4 bg-black text-white font-semibold rounded-xl hover:bg-gray-800 transition-all duration-300 transform hover:scale-105"
+            >
+              Find Your Mentor
+            </button>
+            <button 
+              onClick={() => navigate('/becomeMentor')}
+              className="px-8 py-4 bg-white text-black font-semibold rounded-xl hover:bg-gray-100 transition-all duration-300 transform hover:scale-105"
+            >
+              Become a Mentor
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </div>
   );
 };
 
@@ -149,34 +475,7 @@ const StatCard = ({ value, label, description }) => {
 const HomePage = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const [activeSkillCategory, setActiveSkillCategory] = useState("Technology");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
-  // Animation references
-  const heroRef = useRef();
-  const [isHeroInView, setIsHeroInView] = useState(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsHeroInView(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-    
-    if (heroRef.current) {
-      observer.observe(heroRef.current);
-    }
-    
-    return () => {
-      if (heroRef.current) {
-        observer.disconnect();
-      }
-    };
-  }, []);
 
   function handleLoginPage() {
     navigate('/login');
@@ -185,418 +484,122 @@ const HomePage = () => {
   function handleSignUpPage() {
     navigate('/signUp');
   }
-  function handleFindMentor(){
-    navigate('/findMentorPage')
-  }
-  
-  // Simulated data for skill domain categories
-  const skillCategories = [
-    { id: 1, name: "Technology", count: 1240 },
-    { id: 2, name: "Business", count: 850 },
-    { id: 3, name: "Design", count: 620 },
-    { id: 4, name: "Marketing", count: 510 },
-    { id: 5, name: "Finance", count: 480 },
-    { id: 6, name: "Leadership", count: 390 }
-  ];
 
-  // Sample success statistics 
-  const successStats = [
-    { id: 1, value: "78%", label: "Career Growth", description: "of mentees reported significant career advancement within 6 months" },
-    { id: 2, value: "92%", label: "Skill Improvement", description: "of users reported meaningful skill improvement after just 4 sessions" },
-    { id: 3, value: "3.5×", label: "ROI", description: "average return on investment reported by our mentees in terms of salary growth" }
-  ];
+  function handleFindMentor() {
+    navigate('/findMentorPage');
+  }
 
   return (
-    <div className="w-full min-h-screen bg-gray-50 flex flex-col justify-start items-start font-sans">
+    <div className="w-full min-h-screen bg-white flex flex-col font-sans">
       {/* Header - Only show if authenticated */}
       {isAuthenticated && <Header />}
       
-      {/* Modern Glass-effect Navigation - Only show if NOT authenticated */}
+      {/* Modern Navigation - Only show if NOT authenticated */}
       {!isAuthenticated && (
-        <motion.div 
-          className="w-full px-6 md:px-16 lg:px-24 py-5 bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50 flex justify-between items-center"
+        <motion.nav 
+          className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100"
           initial={{ y: -100 }}
           animate={{ y: 0 }}
-          transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.2 }}
+          transition={{ duration: 0.6 }}
         >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700">
-              <motion.div 
-                className="w-6 h-6 absolute inset-1 bg-white"
-                initial={{ rotate: 0 }}
-                animate={{ rotate: 45 }}
-                transition={{ duration: 0.6 }}
-              ></motion.div>
-            </div>
-            <div className="text-gray-800 text-xl font-bold tracking-tight">
-              Skill<span className="text-blue-600">Bridge</span>
-            </div>
-          </div>
-          
-          <div className="hidden lg:flex items-center gap-10">
-            <motion.div 
-              className="text-gray-700 font-medium hover:text-blue-600 transition-colors cursor-pointer"
-              whileHover={{ scale: 1.05 }}
-            >
-              Home
-            </motion.div>
-            <motion.div 
-              className="text-gray-700 font-medium hover:text-blue-600 transition-colors cursor-pointer"
-              whileHover={{ scale: 1.05 }}
-              onClick={handleFindMentor}
-            >
-              Find Mentors
-            </motion.div>
-            <motion.div 
-              className="text-gray-700 font-medium hover:text-blue-600 transition-colors cursor-pointer"
-              whileHover={{ scale: 1.05 }}
-            >
-              About Us
-            </motion.div>
-            <motion.div 
-              className="text-gray-700 font-medium hover:text-blue-600 transition-colors cursor-pointer"
-              whileHover={{ scale: 1.05 }}
-            >
-              Contact
-            </motion.div>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <motion.div 
-              className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 transition-colors rounded-xl cursor-pointer hidden md:block"
-              whileHover={{ scale: 1.05 }}
-              onClick={handleLoginPage}
-            >
-              <div className="text-gray-700 font-medium">Login</div>
-            </motion.div>
-            <motion.div 
-              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-colors rounded-xl cursor-pointer shadow-lg shadow-blue-200/50 hidden md:block"
-              whileHover={{ scale: 1.05 }}
-              onClick={handleSignUpPage}
-            >
-              <div className="text-white font-medium">Sign Up</div>
-            </motion.div>
-            
-            {/* Mobile Menu Button */}
-            <div className="lg:hidden cursor-pointer" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </div>
-          </div>
-        </motion.div>
-      )}
-      
-      {/* Mobile Menu - Only show if NOT authenticated */}
-      {!isAuthenticated && mobileMenuOpen && (
-        <motion.div 
-          className="fixed inset-0 bg-white z-40 pt-20 px-6 lg:hidden overflow-y-auto"
-          initial={{ opacity: 0, x: "100%" }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: "100%" }}
-          transition={{ duration: 0.3 }}
-        >
-          <div className="flex flex-col gap-6">
-            <div className="text-gray-800 font-medium py-3 border-b cursor-pointer">Home</div>
-            <div className="text-gray-800 font-medium py-3 border-b cursor-pointer" onClick={handleFindMentor}>Find Mentors</div>
-            <div className="text-gray-800 font-medium py-3 border-b cursor-pointer">About Us</div>
-            <div className="text-gray-800 font-medium py-3 border-b cursor-pointer">Resources</div>
-            <div className="text-gray-800 font-medium py-3 border-b cursor-pointer">Contact</div>
-            <div className="flex gap-4 mt-4">
-              <div 
-                className="w-1/2 px-5 py-3 bg-gray-100 text-center rounded-xl cursor-pointer"
-                onClick={handleLoginPage}
-              >
-                <div className="text-gray-700 font-medium">Login</div>
-              </div>
-              <div 
-                className="w-1/2 px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-center rounded-xl shadow-lg shadow-blue-200/50 cursor-pointer"
-                onClick={handleSignUpPage}
-              >
-                <div className="text-white font-medium">Sign Up</div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Main Content Container with Conditional Top Margin */}
-      <div className={isAuthenticated ? "mt-20 w-full" : "w-full"}>
-        {/* Enhanced Hero Section with 3D Element and Animation */}
-        <HeroSection/>
-
-        {/* Trusted By Section */}
-        <LogoCarousel/> 
-
-        {/* Enhanced Video Introduction Section */}
-        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-20 bg-gradient-to-br from-blue-50 to-white">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-12">
-              <motion.div 
-                className="w-full md:w-1/2"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
-                viewport={{ once: true, amount: 0.3 }}
-              >
-                <div className="relative rounded-2xl overflow-hidden shadow-2xl aspect-video group">
-                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/80 to-indigo-900/60 flex items-center justify-center">
-                    <motion.div 
-                      className="absolute z-10 w-20 h-20 bg-white rounded-full flex items-center justify-center cursor-pointer shadow-xl shadow-blue-900/30"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                    >
-                      <Play className="w-8 h-8 text-blue-600 ml-1" />
-                    </motion.div>
-                  </div>
-                  <img src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=640&q=80" alt="Video thumbnail" className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" />
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <div className="flex items-center justify-between h-20">
+              {/* Logo */}
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">SB</span>
                 </div>
-              </motion.div>
-              
-              <motion.div 
-                className="w-full md:w-1/2"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-                viewport={{ once: true, amount: 0.3 }}
-              >
-                <div className="inline-flex items-center px-3 py-1 bg-blue-100 rounded-full mb-4">
-                  <span className="text-blue-700 text-sm font-medium">Our Story</span>
-                </div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-4 leading-tight">See How SkillBridge Is Transforming Careers</h2>
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  Watch how our platform connects ambitious professionals with world-class mentors to accelerate career growth and develop essential skills for today's competitive job market.
-                </p>
-                <ul className="space-y-4">
-                  <motion.li 
-                    className="flex items-start gap-3"
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5, delay: 0.3 }}
-                    viewport={{ once: true }}
-                  >
-                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mt-0.5">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">Hear success stories directly from our mentees</span>
-                  </motion.li>
-                  <motion.li 
-                    className="flex items-start gap-3"
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5, delay: 0.4 }}
-                    viewport={{ once: true }}
-                  >
-                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mt-0.5">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">Learn how our AI-powered matching algorithm works</span>
-                  </motion.li>
-                  <motion.li 
-                    className="flex items-start gap-3"
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5, delay: 0.5 }}
-                    viewport={{ once: true }}
-                  >
-                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mt-0.5">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">See our platform's interactive features in action</span>
-                  </motion.li>
-                </ul>
-              </motion.div>
-            </div>
-          </div>
-        </div>
+                <span className="text-2xl font-bold text-gray-900">
+                  Skill<span className="text-blue-600">Bridge</span>
+                </span>
+              </div>
 
-        {/* How It Works Section - Modern Cards with Illustrations */}
-        <HowItWorksSection/>
+              {/* Desktop Navigation */}
+              <div className="hidden lg:flex items-center space-x-8">
+                <a href="#" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">Home</a>
+                <a href="#" onClick={handleFindMentor} className="text-gray-700 hover:text-blue-600 font-medium transition-colors">Find Mentors</a>
+                <a href="#" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">About</a>
+                <a href="#" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">Contact</a>
+              </div>
 
-        {/* Success Metrics Section - Enhanced with Animations */}
-        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-24 bg-gradient-to-br from-blue-900 via-indigo-900 to-blue-800 text-white relative overflow-hidden">
-          {/* Abstract Background Shapes */}
-          <div className="absolute inset-0 overflow-hidden opacity-20">
-            <div className="absolute top-0 left-1/4 w-64 h-64 rounded-full bg-blue-500 filter blur-3xl"></div>
-            <div className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full bg-indigo-500 filter blur-3xl"></div>
-          </div>
-          
-          <div className="max-w-7xl mx-auto relative z-10">
-            <div className="text-center mb-16">
-              <motion.div 
-                className="inline-flex items-center px-3 py-1 bg-blue-800/50 rounded-full mb-4"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                viewport={{ once: true, amount: 0.3 }}
-              >
-                <span className="text-blue-200 text-sm font-medium">Proven Results</span>
-              </motion.div>
-              <motion.h2 
-                className="text-3xl md:text-4xl font-bold mb-4"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                viewport={{ once: true, amount: 0.3 }}
-              >
-                Our Impact By The Numbers
-              </motion.h2>
-              <motion.p 
-                className="text-blue-200 max-w-2xl mx-auto"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                viewport={{ once: true, amount: 0.3 }}
-              >
-                Real results that demonstrate the transformative power of expert mentorship
-              </motion.p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {successStats.map((stat, index) => (
-                <StatCard 
-                  key={stat.id} 
-                  value={stat.value} 
-                  label={stat.label} 
-                  description={stat.description} 
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Skill Categories Section - Enhanced UI */}
-        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-24 bg-white">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-12">
-              <motion.div 
-                className="inline-flex items-center px-3 py-1 bg-blue-100 rounded-full mb-4"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                viewport={{ once: true, amount: 0.3 }}
-              >
-                <span className="text-blue-700 text-sm font-medium">Explore By Domain</span>
-              </motion.div>
-              <motion.h2 
-                className="text-3xl md:text-4xl font-bold mb-4"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                viewport={{ once: true, amount: 0.3 }}
-              >
-                Find Mentors In Your Field
-              </motion.h2>
-              <motion.p 
-                className="text-gray-600 max-w-2xl mx-auto"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                viewport={{ once: true, amount: 0.3 }}
-              >
-                Browse our extensive network of verified mentors across diverse professional domains
-              </motion.p>
-            </div>
-            
-            <motion.div 
-              className="flex flex-wrap justify-center gap-4 mb-16"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              viewport={{ once: true, amount: 0.3 }}
-            >
-              {skillCategories.map((category) => (
-                <motion.button 
-                  key={category.id}
-                  className={`px-6 py-3 rounded-full flex items-center gap-2 transition-all ${
-                    activeSkillCategory === category.name 
-                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-200/50" 
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                  onClick={() => setActiveSkillCategory(category.name)}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.98 }}
+              {/* Auth Buttons */}
+              <div className="hidden lg:flex items-center space-x-4">
+                <button 
+                  onClick={handleLoginPage}
+                  className="px-6 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors"
                 >
-                  <span className="font-medium">{category.name}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    activeSkillCategory === category.name 
-                      ? "bg-white/20" 
-                      : "bg-gray-200"
-                  }`}>{category.count}</span>
-                </motion.button>
-              ))}
-            </motion.div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              <ModernCategoryCard 
-                icon={<PanelLeft className="w-5 h-5 text-blue-600" />}
-                title="Software Development"
-                mentorsCount="720+ mentors"
-                color="bg-blue-50"
-              />
-              <ModernCategoryCard 
-                icon={<BarChart className="w-5 h-5 text-purple-600" />}
-                title="Data Science & Analytics"
-                mentorsCount="340+ mentors"
-                color="bg-purple-50"
-              />
-              <ModernCategoryCard 
-                icon={<Zap className="w-5 h-5 text-yellow-600" />}
-                title="Product Management"
-                mentorsCount="280+ mentors"
-                color="bg-yellow-50"
-              />
-              <ModernCategoryCard 
-                icon={<MessageCircle className="w-5 h-5 text-green-600" />}
-                title="UX/UI Design"
-                mentorsCount="210+ mentors"
-                color="bg-green-50"
-              />
-              <ModernCategoryCard 
-                icon={<GraduationCap className="w-5 h-5 text-indigo-600" />}
-                title="AI & Machine Learning"
-                mentorsCount="180+ mentors"
-                color="bg-indigo-50"
-              />
-              <ModernCategoryCard 
-                icon={<Briefcase className="w-5 h-5 text-red-600" />}
-                title="Leadership & Management"
-                mentorsCount="310+ mentors"
-                color="bg-red-50"
-              />
-              <ModernCategoryCard 
-                icon={<Globe className="w-5 h-5 text-teal-600" />}
-                title="Digital Marketing"
-                mentorsCount="240+ mentors"
-                color="bg-teal-50"
-              />
-              <ModernCategoryCard 
-                icon={<Tag className="w-5 h-5 text-orange-600" />}
-                title="Explore All Categories"
-                mentorsCount="5000+ mentors"
-                color="bg-orange-50"
-                isSpecial={true}
-              />
+                  Sign In
+                </button>
+                <button 
+                  onClick={handleSignUpPage}
+                  className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-300"
+                >
+                  Get Started
+                </button>
+              </div>
+
+              {/* Mobile Menu Button */}
+              <button 
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="lg:hidden p-2 text-gray-700"
+              >
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
             </div>
           </div>
-        </div>
 
-        {/* Popular Mentors Section */}
-        <PopularMentorsSection/>
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <motion.div 
+              className="lg:hidden bg-white border-t border-gray-100"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+            >
+              <div className="px-6 py-4 space-y-4">
+                <a href="#" className="block text-gray-700 hover:text-blue-600 font-medium">Home</a>
+                <a href="#" onClick={handleFindMentor} className="block text-gray-700 hover:text-blue-600 font-medium">Find Mentors</a>
+                <a href="#" className="block text-gray-700 hover:text-blue-600 font-medium">About</a>
+                <a href="#" className="block text-gray-700 hover:text-blue-600 font-medium">Contact</a>
+                <div className="pt-4 border-t border-gray-100 space-y-2">
+                  <button 
+                    onClick={handleLoginPage}
+                    className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg"
+                  >
+                    Sign In
+                  </button>
+                  <button 
+                    onClick={handleSignUpPage}
+                    className="block w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg"
+                  >
+                    Get Started
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </motion.nav>
+      )}
+
+      {/* Main Content */}
+      <div className={isAuthenticated ? "mt-20" : ""}>
+        {/* Enhanced Hero Section */}
+        <EnhancedHeroSection />
+
+        {/* Features Section */}
+        <FeaturesSection />
+
+        {/* Categories Section */}
+        <CategoriesSection />
 
         {/* Testimonials Section */}
-        <div className="w-full bg-white">
-          <TestimonialSlider/>
-        </div>
+        <TestimonialsSection />
 
-        {/* FAQ Section - Improved Design */}
-        <FAQSection/>
+        {/* CTA Section */}
+        <CTASection />
 
-        {/* Newsletter Section */}
-        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-20 bg-white">
-          <NewsletterSignup />
-        </div>
-
-        <Footer/>
+        {/* Footer */}
+        <Footer />
       </div>
     </div>
   );
