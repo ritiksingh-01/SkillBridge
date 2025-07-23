@@ -125,26 +125,6 @@ npm run dev
 
 ---
 
-## 📁 Project Structure
-
-```
-skillbridge/
-├── server/                 # Backend API
-│   ├── models/            # MongoDB schemas
-│   ├── routes/            # API endpoints
-│   ├── middleware/        # Auth & validation
-│   └── server.js          # Express server
-├── src/                   # Frontend React app
-│   ├── components/        # Reusable components
-│   ├── pages/            # Page components
-│   ├── context/          # React context
-│   ├── services/         # API services
-│   └── App.jsx           # Main app component
-└── README.md
-```
-
----
-
 ## 🔑 Key Features Implementation
 
 ### 🔐 Authentication System
@@ -155,7 +135,6 @@ skillbridge/
 
 ### 📊 Dashboard Systems
 - **Mentor Dashboard**: Session management, earnings tracking, mentee overview
-- **Mentee Dashboard**: Learning progress, mentor discovery, session history
 
 ### 💬 Real-time Communication
 - Socket.io integration for live messaging
@@ -217,18 +196,18 @@ skillbridge/
         <sub><b>🚀 Ritik Singh</b></sub>
       </a>
       <br />
-      <em>Project Lead & Full Stack Developer</em>
+      <em>Project Lead & MERN Stack Developer</em>
       <br />
       <small>💻 Architecture • 🎨 UI/UX • ⚡ Performance</small>
     </td>
     <td align="center" width="50%">
-      <a href="https://github.com/Priyanshi0112">
-        <img src="https://github.com/Priyanshi0112.png" width="120px;" alt="Priyanshi" style="border-radius: 50%;"/>
+      <a href="https://github.com/priyanshibhargava-12">
+        <img src="https://github.com/priyanshibhargava-12.png" width="120px;" alt="Priyanshi" style="border-radius: 50%;"/>
         <br />
         <sub><b>✨ Priyanshi</b></sub>
       </a>
       <br />
-      <em>Frontend Developer & UI/UX Designer</em>
+      <em>Frontend Developer</em>
       <br />
       <small>🎨 Design Systems • 📱 Responsive • 💫 Animations</small>
     </td>
