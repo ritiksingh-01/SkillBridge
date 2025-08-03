@@ -197,14 +197,6 @@ npm run dev
 
 ---
 
-## 📄 **License**
-
-Licensed under the [MIT License](LICENSE).
-
-<div align="center">
-
----
-
 *© 2024 SkillBridge. Empowering mentorship, one connection at a time.*
 
 [⬆️ Back to Top](#-skillbridge--the-ultimate-mentor-hub)
