@@ -10,7 +10,6 @@ A powerful, modern, and intuitive mentorship platform that bridges the gap betwe
 
 <p align="center">
   <img src="https://img.shields.io/github/license/ritiksingh-01/SkillBridge?style=flat-square" />
-  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" />
   <img src="https://img.shields.io/badge/Made%20with-❤️-red?style=flat-square" />
 </p>
 
@@ -134,7 +133,7 @@ npm run dev
 
 ---
 
-## 👥 **Contributors**
+## 👥 **Development Team**
 
 <div align="center">
 
@@ -165,26 +164,7 @@ npm run dev
   </tr>
 </table>
 
-*We're always looking for passionate contributors to join our mission!*
-
 </div>
-
----
-
-## 🤝 **How to Contribute**
-
-1. **Fork** the repository  
-2. **Create** your feature branch: `git checkout -b feature/AmazingFeature`  
-3. **Commit** your changes: `git commit -m 'Add some AmazingFeature'`  
-4. **Push** to the branch: `git push origin feature/AmazingFeature`  
-5. **Open a Pull Request**  
-
-### 💡 Want ideas?
-- 🐛 Bug fixes & improvements
-- ✨ New features
-- 📚 Documentation
-- 🎨 UI/UX enhancements
-- 🧪 Tests
 
 ---
 
@@ -193,7 +173,7 @@ npm run dev
 - **GitHub:** [@ritiksingh-01](https://github.com/ritiksingh-01)
 - **LinkedIn:** [Ritik Singh](https://linkedin.com/in/ritik-singh)
 
-> If you love SkillBridge, ⭐ star the repo, 🍴 fork it, 🐛 report bugs, or 💡 suggest features!
+> If you love SkillBridge, ⭐ star the repo and share it with others!
 
 ---
 
