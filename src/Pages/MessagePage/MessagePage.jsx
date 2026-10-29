@@ -9,6 +9,7 @@ import {
 import Header from '../../Components/Header';
 import Footer from '../../Components/Footer';
 import { useSocket } from '../../context/SocketContext';
+import { useAuth } from '../../context/AuthContext';
 import { messagesAPI, sessionsAPI, mentorsAPI } from '../../services/api';
 
 // Query Message Component
@@ -105,6 +106,12 @@ const MentorListItem = ({ mentor, isSelected, onClick }) => {
 };
 
 const MessagePage = () => {
+  const { user: authUser } = useAuth();
+  const authUserRef = useRef(authUser);
+  useEffect(() => {
+    authUserRef.current = authUser;
+  }, [authUser]);
+
   const [message, setMessage] = useState('');
   const [mentorsList, setMentorsList] = useState([]);
   const [selectedMentor, setSelectedMentor] = useState(null);
@@ -125,7 +132,7 @@ const MessagePage = () => {
         if (rawSessions.length > 0) {
           const formatted = rawSessions.map(s => {
             const rawUser = localStorage.getItem('user');
-            const currentUser = rawUser ? JSON.parse(rawUser) : null;
+            const currentUser = authUserRef.current || (rawUser ? JSON.parse(rawUser) : null);
             const currentUserId = currentUser?._id || currentUser?.id;
 
             const isMentee = s.mentee?._id?.toString() === currentUserId?.toString();
@@ -218,7 +225,7 @@ const MessagePage = () => {
       .then(res => {
         if (res.data?.messages) {
           const rawUser = localStorage.getItem('user');
-          const currentUser = rawUser ? JSON.parse(rawUser) : null;
+          const currentUser = authUserRef.current || (rawUser ? JSON.parse(rawUser) : null);
           const currentUid = currentUser?._id || currentUser?.id;
 
           const formatted = res.data.messages.map(msg => {
@@ -255,7 +262,7 @@ const MessagePage = () => {
       if (!data) return;
 
       const rawUser = localStorage.getItem('user');
-      const currentUser = rawUser ? JSON.parse(rawUser) : null;
+      const currentUser = authUserRef.current || (rawUser ? JSON.parse(rawUser) : null);
       const currentUid = currentUser?._id || currentUser?.id;
 
       const dataSessionId = data.session?._id || data.session || data.sessionId || data.roomId;

@@ -25,7 +25,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      const isAuthCheck = error.config?.url?.includes('/auth/me');
+      const isAuthCheck = error.config?.url?.includes('/auth/me') || error.config?.url?.includes('/users/profile');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       if (typeof window !== 'undefined' &&

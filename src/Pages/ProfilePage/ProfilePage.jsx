@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { usersAPI, mentorsAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import MentorCard from '../../Components/MentorCard';
 import Header from '../../Components/Header';
 import {
@@ -328,6 +329,7 @@ const Skeleton = () => (
 /* ------------------------------------------------------------------ */
 
 const ProfilePage = () => {
+  const { updateUser } = useAuth();
   const [user, setUser] = useState(null);
   const [mentor, setMentor] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -363,6 +365,9 @@ const ProfilePage = () => {
         setFormData(userData);
         setProfileImagePreview(userData.profileImage || null);
         setCoverImagePreview(userData.coverImage || null);
+        if (updateUser) {
+          updateUser(userData);
+        }
 
         // Fetch mentor profile directly from backend instead of client-filtering first 12 mentors (F10)
         if (userData.role === 'mentor') {
@@ -383,7 +388,7 @@ const ProfilePage = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [updateUser]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -459,7 +464,11 @@ const ProfilePage = () => {
       }
 
       // Keep the "saved" snapshot in sync so Cancel restores the right values
-      setUser((prev) => ({ ...prev, ...userPayload }));
+      const updatedUser = { ...user, ...userPayload };
+      setUser(updatedUser);
+      if (updateUser) {
+        updateUser(updatedUser);
+      }
       if (mentorPayload) setMentor((prev) => ({ ...prev, ...mentorPayload }));
 
       setSuccess('Profile updated successfully!');

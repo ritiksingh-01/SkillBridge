@@ -19,6 +19,7 @@ import {
 import Header from '../../Components/Header';
 import Footer from '../../Components/Footer';
 import { useSocket } from '../../context/SocketContext';
+import { useAuth } from '../../context/AuthContext';
 import { notificationsAPI } from '../../services/api';
 
 /* ------------------------------------------------------------------ */
@@ -183,8 +184,14 @@ const NotificationPage = () => {
     document.head.appendChild(link);
   }, []);
 
+  const { user: authUser } = useAuth();
+
   // Fetch user ID with both id and _id support (F5)
   useEffect(() => {
+    if (authUser?._id || authUser?.id) {
+      setUserId(authUser._id || authUser.id);
+      return;
+    }
     try {
       const rawUser = localStorage.getItem('user');
       if (rawUser) {
@@ -196,7 +203,7 @@ const NotificationPage = () => {
       // Ignore
     }
     setLoading(false);
-  }, []);
+  }, [authUser]);
 
   // Fetch notifications from backend
   useEffect(() => {

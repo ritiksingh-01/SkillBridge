@@ -42,14 +42,9 @@ const Header = () => {
     setProfileMenuOpen(false);
   };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-      navigate('/login');
-    }
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   const isActive = (path) => {

@@ -39,6 +39,9 @@ export const SocketProvider = ({ children }) => {
         const rawUser = localStorage.getItem('user');
         if (rawUser) {
           const user = JSON.parse(rawUser);
+          if (user?.id === 'temp_user' || user?.email === 'test@example.com') {
+            return;
+          }
           const userId = user._id || user.id;
           if (userId) {
             socket.emit('join-user-room', userId);
@@ -66,6 +69,9 @@ export const SocketProvider = ({ children }) => {
         const rawUser = localStorage.getItem('user');
         if (rawUser) {
           const user = JSON.parse(rawUser);
+          if (user?.id === 'temp_user' || user?.email === 'test@example.com') {
+            return;
+          }
           const userId = user._id || user.id;
           if (userId) {
             socket.emit('join-user-room', userId);

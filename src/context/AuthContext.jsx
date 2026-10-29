@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authAPI } from '../services/api';
+import { authAPI, usersAPI } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -26,7 +26,14 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try {
       const stored = localStorage.getItem('user');
-      return stored ? normalizeUser(JSON.parse(stored)) : null;
+      if (!stored) return null;
+      const parsed = JSON.parse(stored);
+      // Clean up legacy mock data
+      if (parsed?.email === 'test@example.com' || parsed?.id === 'temp_user') {
+        localStorage.removeItem('user');
+        return null;
+      }
+      return normalizeUser(parsed);
     } catch {
       return null;
     }
@@ -45,9 +52,22 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      // Validate session with server (F11)
-      const res = await authAPI.getMe();
-      if (res.data?.user) {
+      // Validate session with server: prefer usersAPI.getProfile for full profile, fallback to authAPI.getMe
+      let res;
+      try {
+        res = await usersAPI.getProfile();
+      } catch (profileErr) {
+        if (profileErr.response?.status === 401) {
+          throw profileErr;
+        }
+        res = await authAPI.getMe();
+      }
+
+      if (res?.data?.user) {
+        // Discard any legacy dummy mock payload
+        if (res.data.user.email === 'test@example.com' || res.data.user.id === 'temp_user') {
+          return;
+        }
         const normalized = normalizeUser(res.data.user);
         setUser(normalized);
         setIsAuthenticated(true);
@@ -112,24 +132,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = async () => {
-    try {
-      await authAPI.logout();
-    } catch {
-      // Ignore network errors on logout
-    } finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setUser(null);
-      setIsAuthenticated(false);
-    }
-  };
+  const logout = useCallback(() => {
+    // Synchronously purge credentials and reset auth state immediately for instant UI response
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    setIsAuthenticated(false);
 
-  const updateUser = (userData) => {
+    // Notify backend in background without blocking UI
+    authAPI.logout().catch(() => {});
+  }, []);
+
+  const updateUser = useCallback((userData) => {
     const normalized = normalizeUser(userData);
     setUser(normalized);
     localStorage.setItem('user', JSON.stringify(normalized));
-  };
+  }, []);
 
   const value = {
     user,
