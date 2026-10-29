@@ -1,28 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHome, faChalkboardTeacher, faEnvelope, faBell, faUser, faCog, faQuestionCircle, faSignOutAlt, faBars, faTimes, faChevronDown, faSearch, faTachometerAlt } from '@fortawesome/free-solid-svg-icons';
+import { 
+  faHome, 
+  faChalkboardTeacher, 
+  faEnvelope, 
+  faBell, 
+  faUser, 
+  faCog, 
+  faQuestionCircle, 
+  faSignOutAlt, 
+  faBars, 
+  faTimes, 
+  faChevronDown, 
+  faSearch, 
+  faTachometerAlt 
+} from '@fortawesome/free-solid-svg-icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useSocket } from '../context/SocketContext';
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [searchFocused, setSearchFocused] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
-  const [user, setUser] = useState(null);
-  const [notificationCount, setNotificationCount] = useState(0);
-  const { isConnected, connectionError } = useSocket();
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout, isAuthenticated } = useAuth();
-
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-  }, []);
+  const { user, logout, isAuthenticated } = useAuth();
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(prev => !prev);
@@ -43,12 +45,10 @@ const Header = () => {
   const handleLogout = async () => {
     try {
       await logout();
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      navigate('/');
+      navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
-      navigate('/');
+      navigate('/login');
     }
   };
 
@@ -60,13 +60,11 @@ const Header = () => {
   const profilePicUrl = !profileImageError && user?.profileImage ? user.profileImage : 
     `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.firstName || 'User')}&background=3B82F6&color=fff`;
 
-  const getProfilePath = () => {
-    return '/profile';
-  };
-
   if (!isAuthenticated) {
     return null; // Don't show header if not authenticated
   }
+
+  const dashboardPath = user?.role === 'mentor' ? '/mentor-dashboard' : '/mentee-dashboard';
 
   return (
     <header className="w-full h-20 px-4 md:px-8 lg:px-16 xl:px-24 bg-white shadow-sm flex justify-between items-center fixed top-0 z-50">
@@ -96,14 +94,12 @@ const Header = () => {
           active={isActive('/')} 
           onClick={() => handleNavigation('/')} 
         />
-        {user?.role === 'mentor' && (
-          <NavItem 
-            icon={<FontAwesomeIcon icon={faTachometerAlt} />} 
-            text="Dashboard" 
-            active={isActive('/mentor-dashboard')} 
-            onClick={() => handleNavigation('/mentor-dashboard')} 
-          />
-        )}
+        <NavItem 
+          icon={<FontAwesomeIcon icon={faTachometerAlt} />} 
+          text="Dashboard" 
+          active={isActive(dashboardPath)} 
+          onClick={() => handleNavigation(dashboardPath)} 
+        />
         <NavItem 
           icon={<FontAwesomeIcon icon={faChalkboardTeacher} />} 
           text="Mentors" 
@@ -152,7 +148,7 @@ const Header = () => {
               <ProfileMenuItem 
                 icon={<FontAwesomeIcon icon={faUser} />} 
                 text="View Profile" 
-                onClick={() => handleNavigation(getProfilePath())} 
+                onClick={() => handleNavigation('/profile')} 
               />
               <ProfileMenuItem 
                 icon={<FontAwesomeIcon icon={faCog} />} 
@@ -185,9 +181,12 @@ const Header = () => {
               <input
                 type="text"
                 className="bg-gray-100 w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search"
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setSearchFocused(false)}
+                placeholder="Search mentors..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleNavigation('/findMentorPage');
+                  }
+                }}
               />
             </div>
           </div>
@@ -198,14 +197,12 @@ const Header = () => {
               active={isActive('/')} 
               onClick={() => handleNavigation('/')} 
             />
-            {user?.role === 'mentor' && (
-              <MobileNavItem 
-                icon={<FontAwesomeIcon icon={faTachometerAlt} />} 
-                text="Dashboard" 
-                active={isActive('/mentor-dashboard')} 
-                onClick={() => handleNavigation('/mentor-dashboard')} 
-              />
-            )}
+            <MobileNavItem 
+              icon={<FontAwesomeIcon icon={faTachometerAlt} />} 
+              text="Dashboard" 
+              active={isActive(dashboardPath)} 
+              onClick={() => handleNavigation(dashboardPath)} 
+            />
             <MobileNavItem 
               icon={<FontAwesomeIcon icon={faChalkboardTeacher} />} 
               text="Mentors" 
@@ -228,8 +225,8 @@ const Header = () => {
             <MobileNavItem 
               icon={<FontAwesomeIcon icon={faUser} />} 
               text="View Profile" 
-              active={isActive(getProfilePath())} 
-              onClick={() => handleNavigation(getProfilePath())} 
+              active={isActive('/profile')} 
+              onClick={() => handleNavigation('/profile')} 
             />
             <MobileNavItem 
               icon={<FontAwesomeIcon icon={faCog} />} 

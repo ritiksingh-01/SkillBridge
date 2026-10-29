@@ -52,6 +52,10 @@ const mentorSchema = new mongoose.Schema({
       type: Number,
       default: 500
     },
+    groupSession: {
+      type: Number,
+      default: 300
+    },
     packageDeals: [{
       sessions: Number,
       price: Number,
@@ -133,6 +137,7 @@ const mentorSchema = new mongoose.Schema({
 });
 
 // Index for search and filtering
+mentorSchema.index({ user: 1 });
 mentorSchema.index({ expertise: 'text', categories: 1, 'rating.average': -1 });
 mentorSchema.index({ isActive: 1, isVerified: 1 });
 
@@ -142,16 +147,16 @@ mentorSchema.methods.calculateScore = function() {
   const sessionWeight = 0.3;
   const responseWeight = 0.2;
   const completionWeight = 0.1;
-  
+
   const ratingScore = (this.rating.average / 5) * 100;
   const sessionScore = Math.min(this.stats.totalSessions / 50, 1) * 100;
-  const responseScore = this.stats.responseTime.includes('1') ? 100 : 
+  const responseScore = this.stats.responseTime.includes('1') ? 100 :
                        this.stats.responseTime.includes('2') ? 80 : 60;
   const completionScore = this.stats.completionRate;
-  
-  return (ratingScore * ratingWeight) + 
-         (sessionScore * sessionWeight) + 
-         (responseScore * responseWeight) + 
+
+  return (ratingScore * ratingWeight) +
+         (sessionScore * sessionWeight) +
+         (responseScore * responseWeight) +
          (completionScore * completionWeight);
 };
 

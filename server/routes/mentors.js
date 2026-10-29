@@ -2,21 +2,19 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const Mentor = require('../models/Mentor');
 const User = require('../models/User');
+const Session = require('../models/Session');
 const { auth } = require('../middleware/auth');
 
 const router = express.Router();
 
-// @route   POST /api/mentors/apply
-// @desc    Apply to become a mentor
-// @access  Private
-router.post('/apply', auth, [
-  body('organization').trim().notEmpty().withMessage('Organization is required'),
-  body('industry').trim().notEmpty().withMessage('Industry is required'),
-  body('currentRole').trim().notEmpty().withMessage('Current role is required'),
-  body('workExperience').trim().notEmpty().withMessage('Work experience is required'),
-  body('headline').trim().notEmpty().withMessage('Headline is required'),
-  body('bio').trim().notEmpty().withMessage('Bio is required')
-], async (req, res) => {
+// Escape regex special characters to prevent ReDoS / regex injection (H11)
+const escapeRegex = (str) => {
+  if (typeof str !== 'string') return '';
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
+// Handler for applying to become a mentor (C3, F6)
+const applyMentorHandler = async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -29,7 +27,6 @@ router.post('/apply', auth, [
       return res.status(400).json({ message: 'Mentor application already exists' });
     }
 
-    // Defensive: Only include categories/expertise if non-empty
     const mentorData = {
       user: req.user.id,
       organization: req.body.organization,
@@ -38,16 +35,27 @@ router.post('/apply', auth, [
       workExperience: req.body.workExperience,
       headline: req.body.headline,
       bio: req.body.bio,
-      pricing: req.body.pricing || {},
+      pricing: {
+        querySession: req.body.pricing?.querySession || 150,
+        oneOnOneSession: req.body.pricing?.oneOnOneSession || 500,
+        groupSession: req.body.pricing?.groupSession || 300,
+      },
       availability: req.body.availability || {},
-      isVerified: true,
-      applicationStatus: 'approved'
+      // Do NOT auto-verify; require admin review or keep pending (C3)
+      isVerified: false,
+      applicationStatus: 'pending'
     };
+
     if (Array.isArray(req.body.expertise) && req.body.expertise.length > 0) {
       mentorData.expertise = req.body.expertise;
     }
     if (Array.isArray(req.body.categories) && req.body.categories.length > 0) {
       mentorData.categories = req.body.categories;
+    }
+    if (req.body.resume) {
+      mentorData.resume = typeof req.body.resume === 'string'
+        ? { url: req.body.resume, filename: 'resume.pdf', uploadedAt: new Date() }
+        : req.body.resume;
     }
 
     const mentor = new Mentor(mentorData);
@@ -57,14 +65,26 @@ router.post('/apply', auth, [
     await User.findByIdAndUpdate(req.user.id, { role: 'mentor' });
 
     res.status(201).json({
-      message: 'Mentor application submitted successfully',
+      message: 'Mentor application submitted successfully and is pending review',
       mentor
     });
   } catch (error) {
-    console.error('Mentor application error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error during mentor application' });
   }
-});
+};
+
+const applyValidation = [
+  body('organization').trim().notEmpty().withMessage('Organization is required'),
+  body('industry').trim().notEmpty().withMessage('Industry is required'),
+  body('currentRole').trim().notEmpty().withMessage('Current role is required'),
+  body('workExperience').trim().notEmpty().withMessage('Work experience is required'),
+  body('headline').trim().notEmpty().withMessage('Headline is required'),
+  body('bio').trim().notEmpty().withMessage('Bio is required')
+];
+
+// @route   POST /api/mentors/apply and POST /api/mentors (F6)
+router.post('/apply', auth, applyValidation, applyMentorHandler);
+router.post('/', auth, applyValidation, applyMentorHandler);
 
 // @route   GET /api/mentors
 // @desc    Get all mentors with filtering
@@ -78,37 +98,46 @@ router.get('/', async (req, res) => {
       skills,
       minRating,
       maxPrice,
-      availability,
       search,
       sortBy = 'rating'
     } = req.query;
 
-    const query = { isActive: true, isVerified: true };
+    const safeLimit = Math.min(Math.max(1, parseInt(limit) || 12), 100);
+    const safePage = Math.max(1, parseInt(page) || 1);
 
-    // Apply filters
-    if (category) {
+    // Filter only active mentors
+    const query = { isActive: true };
+
+    // Apply filters with safe type handling (H11)
+    if (category && typeof category === 'string') {
       query.categories = { $in: [category] };
     }
 
-    if (skills) {
-      const skillsArray = skills.split(',');
-      query.expertise = { $in: skillsArray };
+    if (skills && typeof skills === 'string') {
+      const skillsArray = skills.split(',').map(s => s.trim()).filter(Boolean);
+      if (skillsArray.length > 0) {
+        query.expertise = { $in: skillsArray };
+      }
     }
 
-    if (minRating) {
+    if (minRating && !isNaN(parseFloat(minRating))) {
       query['rating.average'] = { $gte: parseFloat(minRating) };
     }
 
-    if (maxPrice) {
+    if (maxPrice && !isNaN(parseInt(maxPrice))) {
       query['pricing.oneOnOneSession'] = { $lte: parseInt(maxPrice) };
     }
 
-    if (search) {
-      query.$or = [
-        { headline: { $regex: search, $options: 'i' } },
-        { bio: { $regex: search, $options: 'i' } },
-        { expertise: { $in: [new RegExp(search, 'i')] } }
-      ];
+    if (search && typeof search === 'string') {
+      const sanitized = escapeRegex(search.trim());
+      if (sanitized) {
+        const regex = new RegExp(sanitized, 'i');
+        query.$or = [
+          { headline: regex },
+          { bio: regex },
+          { expertise: { $in: [regex] } }
+        ];
+      }
     }
 
     // Sort options
@@ -130,68 +159,134 @@ router.get('/', async (req, res) => {
         sort = { 'rating.average': -1 };
     }
 
-    const mentors = await Mentor.find(query)
-      .populate('user', 'firstName lastName profileImage location')
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .sort(sort);
-
-    const total = await Mentor.countDocuments(query);
+    const [mentors, total] = await Promise.all([
+      Mentor.find(query)
+        .populate('user', 'firstName lastName profileImage location')
+        .limit(safeLimit)
+        .skip((safePage - 1) * safeLimit)
+        .sort(sort)
+        .lean(),
+      Mentor.countDocuments(query)
+    ]);
 
     res.json({
       mentors,
       pagination: {
-        current: parseInt(page),
-        pages: Math.ceil(total / limit),
+        current: safePage,
+        pages: Math.ceil(total / safeLimit),
         total
       }
     });
   } catch (error) {
-    console.error('Get mentors error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error retrieving mentors' });
   }
 });
 
-// @route   GET /api/mentors/:id
-// @desc    Get mentor by ID
-// @access  Public
-router.get('/:id', async (req, res) => {
-  try {
-    const mentor = await Mentor.findById(req.params.id)
-      .populate('user', 'firstName lastName profileImage location socialLinks');
-
-    if (!mentor) {
-      return res.status(404).json({ message: 'Mentor not found' });
-    }
-
-    res.json({ mentor });
-  } catch (error) {
-    console.error('Get mentor error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// @route   PUT /api/mentors/profile
-// @desc    Update mentor profile
+// @route   GET /api/mentors/dashboard/stats
+// @desc    Get mentor dashboard stats - declared BEFORE /:id (H3)
 // @access  Private
-router.put('/profile', auth, async (req, res) => {
+router.get('/dashboard/stats', auth, async (req, res) => {
   try {
-    const mentor = await Mentor.findOne({ user: req.user.id });
+    const mentor = await Mentor.findOne({ user: req.user.id }).lean();
     if (!mentor) {
       return res.status(404).json({ message: 'Mentor profile not found' });
     }
 
+    // High-performance single aggregation pipeline for all session metrics
+    const sessionStats = await Session.aggregate([
+      { $match: { mentor: mentor._id } },
+      {
+        $group: {
+          _id: null,
+          totalSessions: { $sum: 1 },
+          completedSessions: {
+            $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
+          },
+          totalEarnings: {
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ['$paymentStatus', 'paid'] }, { $gt: ['$price', 0] }] },
+                '$price',
+                0
+              ]
+            }
+          },
+          uniqueMentees: { $addToSet: '$mentee' }
+        }
+      }
+    ]);
+
+    const s = sessionStats[0] || {
+      totalSessions: 0,
+      completedSessions: 0,
+      totalEarnings: 0,
+      uniqueMentees: []
+    };
+
+    const totalSessions = s.totalSessions;
+    const completedSessions = s.completedSessions;
+    const totalEarnings = s.totalEarnings;
+    const totalMentees = s.uniqueMentees.length;
+
+    const stats = {
+      totalSessions: mentor.stats?.totalSessions || totalSessions,
+      completedSessions,
+      totalMentees: totalMentees || mentor.stats?.totalMentees || 0,
+      totalEarnings,
+      earnings: totalEarnings,
+      rating: mentor.rating || { average: 5.0, count: 0 },
+      responseTime: mentor.stats?.responseTime || '~2 hours',
+      completionRate: totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : (mentor.stats?.completionRate || 100),
+    };
+
+    res.json({ stats, data: stats });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error fetching mentor statistics' });
+  }
+});
+
+// @route   GET /api/mentors/profile/me
+// @desc    Get logged in mentor's own profile (F10)
+// @access  Private
+router.get('/profile/me', auth, async (req, res) => {
+  try {
+    const mentor = await Mentor.findOne({ user: req.user.id })
+      .populate('user', 'firstName lastName profileImage email location socialLinks');
+
+    if (!mentor) {
+      return res.status(404).json({ message: 'Mentor profile not found' });
+    }
+
+    res.json({ mentor });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error fetching mentor profile' });
+  }
+});
+
+// Update mentor profile handler (supports both /profile and /:id) (F6)
+const updateMentorProfileHandler = async (req, res) => {
+  try {
+    let mentor;
+    // If an ID is passed in params, mentor can be updated if the caller owns it
+    if (req.params.id) {
+      mentor = await Mentor.findOne({ _id: req.params.id, user: req.user.id });
+    } else {
+      mentor = await Mentor.findOne({ user: req.user.id });
+    }
+
+    if (!mentor) {
+      return res.status(404).json({ message: 'Mentor profile not found or access denied' });
+    }
+
     const allowedUpdates = [
       'organization', 'industry', 'currentRole', 'workExperience',
-      'headline', 'bio', 'expertise', 'categories', 'pricing', 'availability'
+      'headline', 'bio', 'expertise', 'categories', 'pricing', 'availability', 'resume'
     ];
 
     const updates = {};
-    // Defensive: Only update categories/expertise if non-empty
     Object.keys(req.body).forEach(key => {
       if (allowedUpdates.includes(key)) {
         if ((key === 'categories' || key === 'expertise') && Array.isArray(req.body[key]) && req.body[key].length === 0) {
-          // skip empty arrays for indexed fields
           return;
         }
         updates[key] = req.body[key];
@@ -209,36 +304,29 @@ router.put('/profile', auth, async (req, res) => {
       mentor: updatedMentor
     });
   } catch (error) {
-    console.error('Update mentor profile error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error updating mentor profile' });
   }
-});
+};
 
-// @route   GET /api/mentors/dashboard/stats
-// @desc    Get mentor dashboard stats
-// @access  Private
-router.get('/dashboard/stats', auth, async (req, res) => {
+// @route   PUT /api/mentors/profile and PUT /api/mentors/:id (F6)
+router.put('/profile', auth, updateMentorProfileHandler);
+router.put('/:id', auth, updateMentorProfileHandler);
+
+// @route   GET /api/mentors/:id
+// @desc    Get mentor by ID
+// @access  Public
+router.get('/:id', async (req, res) => {
   try {
-    const mentor = await Mentor.findOne({ user: req.user.id });
+    const mentor = await Mentor.findById(req.params.id)
+      .populate('user', 'firstName lastName profileImage location socialLinks');
+
     if (!mentor) {
-      return res.status(404).json({ message: 'Mentor profile not found' });
+      return res.status(404).json({ message: 'Mentor not found' });
     }
 
-    // Get additional stats from sessions, messages, etc.
-    // This would require importing Session and Message models
-    const stats = {
-      totalSessions: mentor.stats.totalSessions,
-      totalMentees: mentor.stats.totalMentees,
-      rating: mentor.rating,
-      responseTime: mentor.stats.responseTime,
-      completionRate: mentor.stats.completionRate,
-      // Add more calculated stats here
-    };
-
-    res.json({ stats });
+    res.json({ mentor });
   } catch (error) {
-    console.error('Get mentor stats error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error finding mentor' });
   }
 });
 

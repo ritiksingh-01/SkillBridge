@@ -1,41 +1,46 @@
 import React, { useState, useRef } from 'react';
-import { 
-  Camera, 
-  Briefcase, 
-  Building, 
-  BookOpen, 
-  Award, 
-  Info, 
-  ChevronLeft, 
-  FileText, 
+import {
+  Briefcase,
+  Building,
+  BookOpen,
+  Award,
+  ChevronLeft,
+  FileText,
   ArrowRight,
   Linkedin,
   Youtube,
   Facebook,
   Instagram,
   Upload,
-  User
+  User,
+  DollarSign
 } from 'lucide-react';
 import Header from '../../Components/Header';
 import { useNavigate } from 'react-router-dom';
 import { mentorsAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 const BecomeMentorPage = () => {
   const fileInputRef = useRef(null);
   const [resumeFile, setResumeFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const navigate = useNavigate();
-  
+  const { user, updateUser } = useAuth();
+
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    gender: '',
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    gender: user?.gender || '',
     organization: '',
     industry: '',
     currentRole: '',
     workExperience: '',
     headline: '',
     bio: '',
+    skillsInput: '',
+    category: 'Technology',
+    oneOnOnePrice: '500',
+    queryPrice: '150',
     socialMedia: {
       linkedin: '',
       youtube: '',
@@ -46,40 +51,32 @@ const BecomeMentorPage = () => {
   });
 
   const [submitError, setSubmitError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [name]: value
-    });
+    }));
   };
 
   const handleSocialMediaChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       socialMedia: {
-        ...formData.socialMedia,
+        ...prev.socialMedia,
         [name]: value
       }
-    });
+    }));
   };
 
   const handleGenderSelect = (gender) => {
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       gender
-    });
-  };
-
-  const handleImageUpload = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setFormData({
-        ...formData,
-        profileImage: URL.createObjectURL(e.target.files[0])
-      });
-    }
+    }));
   };
 
   const handleResumeUpload = (e) => {
@@ -89,15 +86,21 @@ const BecomeMentorPage = () => {
       setIsUploading(true);
       setTimeout(() => {
         setIsUploading(false);
-      }, 1500);
+      }, 500);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitError(null);
+    setIsSubmitting(true);
+
     try {
-      // Map formData to backend expected fields
+      const skillsArray = formData.skillsInput
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+
       const payload = {
         organization: formData.organization,
         industry: formData.industry,
@@ -105,200 +108,139 @@ const BecomeMentorPage = () => {
         workExperience: formData.workExperience,
         headline: formData.headline,
         bio: formData.bio,
-        expertise: [], // Add expertise/skills fields if present in your form
-        categories: [], // Add categories if present in your form
-        pricing: {}, // Add pricing if present in your form
-        availability: {}, // Add availability if present in your form
+        expertise: skillsArray.length > 0 ? skillsArray : ['Mentorship', formData.currentRole],
+        categories: [formData.category],
+        pricing: {
+          oneOnOneSession: parseInt(formData.oneOnOnePrice) || 500,
+          querySession: parseInt(formData.queryPrice) || 150
+        },
+        availability: {
+          timezone: 'Asia/Kolkata',
+          schedule: []
+        },
+        resume: resumeFile ? {
+          filename: resumeFile.name,
+          url: URL.createObjectURL(resumeFile),
+          uploadedAt: new Date()
+        } : undefined
       };
+
       await mentorsAPI.apply(payload);
-      navigate('/findMentorPage');
+
+      // Update user in auth context to mentor role (F9)
+      if (user) {
+        updateUser({
+          ...user,
+          role: 'mentor'
+        });
+      }
+
+      navigate('/mentor-dashboard');
     } catch (err) {
-      setSubmitError('Failed to submit mentor application. Please check your details and try again.');
+      const msg = err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || 'Failed to submit mentor application. Please check your details and try again.';
+      setSubmitError(msg);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleBack = () => {
-    navigate('/')
-  };
-
-  const handleGuidelines = () => {
-    console.log('Showing guidelines');
+    navigate('/');
   };
 
   const genderOptions = [
     { value: 'Male', icon: <User className="text-blue-600" /> },
     { value: 'Female', icon: <User className="text-pink-500" /> },
     { value: 'Non-binary', icon: <User className="text-purple-500" /> },
-    { value: 'Transgender', icon: <User className="text-green-500" /> },
-    { value: 'Intersex', icon: <User className="text-yellow-500" /> },
     { value: 'Other', icon: <User className="text-gray-600" /> }
   ];
 
+  const categories = [
+    'Technology', 'Business', 'Design', 'Marketing', 'Finance',
+    'Leadership', 'Product', 'Engineering', 'Data', 'AI', 'Cloud', 'Security'
+  ];
+
   return (
-    <div className="w-full min-h-screen bg-gray-50">
-      {/* Import Header Component */}
+    <div className="w-full min-h-screen bg-gray-50 flex flex-col justify-between">
       <Header />
 
-      {/* Main Content */}
-      <main className="flex flex-col items-center pt-32 pb-16 px-4">
-        <div className="w-full max-w-5xl">
-          <div className="flex items-center mb-8">
-            <button 
-              onClick={handleBack}
-              className="mr-4 p-2 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors cursor-pointer"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Become a Mentor!</h1>
-              <p className="text-lg text-gray-600 mt-1">Share your knowledge and help others grow professionally</p>
-            </div>
-          </div>
+      <main className="container mx-auto px-4 md:px-8 lg:px-16 xl:px-24 py-8 mt-20">
+        <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-6 md:p-10">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Become a Mentor</h1>
+            <p className="text-gray-600 mb-8">Share your expertise and guide the next generation of leaders.</p>
 
-          {/* Form Card */}
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-16">
-            {/* Profile Banner */}
-            <div className="relative h-64">
-              <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
-              
-              {/* Profile Image */}
-              <div className="absolute bottom-0 left-10 transform translate-y-1/2">
-                <div className="w-40 h-40 rounded-full border-4 border-white bg-white shadow-lg overflow-hidden">
-                  {formData.profileImage ? (
-                    <img 
-                      src={formData.profileImage} 
-                      alt="Profile" 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-blue-50 flex items-center justify-center">
-                      <User size={64} className="text-blue-300" />
-                    </div>
-                  )}
+            {submitError && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
+                {submitError}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Resume / CV Upload */}
+              <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 flex items-center justify-between">
+                <div>
+                  <h4 className="font-semibold text-gray-800 text-sm">Upload Resume / CV</h4>
+                  <p className="text-xs text-gray-500">PDF, DOC up to 5MB</p>
                 </div>
-                <label htmlFor="profile-upload" className="absolute bottom-0 right-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center cursor-pointer shadow-md hover:bg-blue-600 transition-colors">
-                  <Camera size={18} className="text-white" />
-                  <input 
-                    type="file" 
-                    id="profile-upload" 
-                    accept="image/*" 
-                    className="hidden" 
-                    onChange={handleImageUpload}
+                <div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleResumeUpload}
+                    accept=".pdf,.doc,.docx"
+                    className="hidden"
                   />
-                </label>
-              </div>
-              
-              <div className="absolute bottom-4 right-8">
-                <button 
-                  type="button"
-                  onClick={handleGuidelines}
-                  className="px-4 py-2 bg-white text-blue-600 rounded-lg text-sm font-medium flex items-center gap-2 shadow-md hover:bg-blue-50 transition-colors"
-                >
-                  <Info size={16} />
-                  Mentor Guidelines
-                </button>
-              </div>
-            </div>
-
-            {/* Form Fields */}
-            <form onSubmit={handleSubmit} className="px-8 pt-24 pb-8 mt-4">
-              {/* Resume Upload Section */}
-              <div className="mb-8 p-4 border border-dashed border-blue-300 bg-blue-50 rounded-lg">
-                <div className="flex flex-col md:flex-row items-center gap-4">
-                  <div className="flex-shrink-0">
-                    <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
-                      <Upload size={24} />
-                    </div>
-                  </div>
-                  <div className="flex-grow text-center md:text-left">
-                    <h3 className="text-lg font-medium text-gray-800 mb-1">Upload Your Resume</h3>
-                    <p className="text-sm text-gray-600 mb-3">Attach your resume to your mentor profile</p>
-                    <div className="flex flex-wrap gap-3 justify-center md:justify-start">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current.click()}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors cursor-pointer"
-                        disabled={isUploading}
-                      >
-                        {isUploading ? "Uploading..." : "Upload Resume"}
-                        <Upload size={16} />
-                      </button>
-                      <input 
-                        type="file" 
-                        ref={fileInputRef}
-                        accept=".pdf,.doc,.docx" 
-                        className="hidden" 
-                        onChange={handleResumeUpload}
-                      />
-                      {resumeFile && (
-                        <span className="text-sm text-gray-600 flex items-center">
-                          {resumeFile.name}
-                          {isUploading && (
-                            <span className="ml-2 inline-block w-4 h-4 border-2 border-t-blue-600 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></span>
-                          )}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Upload size={16} />
+                    {resumeFile ? resumeFile.name : 'Choose File'}
+                  </button>
+                  {isUploading && <span className="text-xs text-blue-600 ml-2">Uploading...</span>}
                 </div>
               </div>
 
-              {submitError && (
-                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">{submitError}</div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
-                {/* First Name */}
-                <FormField
-                  label="First Name"
-                  required={true}
-                >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField label="First Name" required>
                   <input
                     type="text"
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleInputChange}
                     required
-                    className="w-full h-12 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter your first name"
+                    className="w-full h-12 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </FormField>
 
-                {/* Last Name */}
-                <FormField
-                  label="Last Name"
-                  required={true}
-                >
+                <FormField label="Last Name" required>
                   <input
                     type="text"
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleInputChange}
                     required
-                    className="w-full h-12 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter your last name"
+                    className="w-full h-12 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </FormField>
 
-                {/* Gender */}
                 <div className="md:col-span-2">
-                  <FormField
-                    label="Gender"
-                    required={true}
-                  >
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                  <FormField label="Gender" required>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {genderOptions.map((option) => (
                         <button
                           key={option.value}
                           type="button"
                           onClick={() => handleGenderSelect(option.value)}
-                          className={`h-12 px-3 rounded-lg border ${
-                            formData.gender === option.value 
-                              ? 'bg-blue-50 border-blue-500 text-blue-700' 
+                          className={`h-12 px-3 rounded-lg border cursor-pointer ${
+                            formData.gender === option.value
+                              ? 'bg-blue-50 border-blue-500 text-blue-700'
                               : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                           } flex items-center gap-2 transition-colors`}
                         >
-                          <div className="w-6 h-6 flex items-center justify-center">
+                          <div className="w-5 h-5 flex items-center justify-center">
                             {option.icon}
                           </div>
                           <span className="text-sm font-medium">{option.value}</span>
@@ -308,11 +250,7 @@ const BecomeMentorPage = () => {
                   </FormField>
                 </div>
 
-                {/* Organization */}
-                <FormField
-                  label="Current Organisation/Institute"
-                  required={true}
-                >
+                <FormField label="Current Organisation / Company" required>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <Building size={18} className="text-gray-400" />
@@ -323,17 +261,13 @@ const BecomeMentorPage = () => {
                       value={formData.organization}
                       onChange={handleInputChange}
                       required
-                      className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter your current organization"
+                      placeholder="e.g. Google, Microsoft, Startup"
+                      className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </FormField>
 
-                {/* Industry */}
-                <FormField
-                  label="Industry"
-                  required={true}
-                >
+                <FormField label="Industry" required>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <BookOpen size={18} className="text-gray-400" />
@@ -344,17 +278,13 @@ const BecomeMentorPage = () => {
                       value={formData.industry}
                       onChange={handleInputChange}
                       required
-                      className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter your industry"
+                      placeholder="e.g. Software, Fintech, Edtech"
+                      className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </FormField>
 
-                {/* Current Role */}
-                <FormField
-                  label="Current Role"
-                  required={true}
-                >
+                <FormField label="Current Role" required>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <Briefcase size={18} className="text-gray-400" />
@@ -365,17 +295,13 @@ const BecomeMentorPage = () => {
                       value={formData.currentRole}
                       onChange={handleInputChange}
                       required
-                      className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter your current role"
+                      placeholder="e.g. Senior Software Engineer"
+                      className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </FormField>
 
-                {/* Work Experience */}
-                <FormField
-                  label="Work Experience"
-                  required={true}
-                >
+                <FormField label="Years of Work Experience" required>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <Award size={18} className="text-gray-400" />
@@ -386,36 +312,91 @@ const BecomeMentorPage = () => {
                       value={formData.workExperience}
                       onChange={handleInputChange}
                       required
-                      className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Years of experience"
+                      placeholder="e.g. 5+ years"
+                      className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </FormField>
 
-                {/* Headline */}
                 <div className="md:col-span-2">
-                  <FormField
-                    label="Professional Headline"
-                    required={true}
-                  >
+                  <FormField label="Category" required>
+                    <select
+                      name="category"
+                      value={formData.category}
+                      onChange={handleInputChange}
+                      className="w-full h-12 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    >
+                      {categories.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </FormField>
+                </div>
+
+                <div className="md:col-span-2">
+                  <FormField label="Expertise & Skills (comma separated)" required>
+                    <input
+                      type="text"
+                      name="skillsInput"
+                      value={formData.skillsInput}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="e.g. React, Node.js, System Design, Career Growth"
+                      className="w-full h-12 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </FormField>
+                </div>
+
+                <FormField label="1:1 Session Price (₹)" required>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <DollarSign size={18} className="text-gray-400" />
+                    </div>
+                    <input
+                      type="number"
+                      name="oneOnOnePrice"
+                      value={formData.oneOnOnePrice}
+                      onChange={handleInputChange}
+                      required
+                      min="0"
+                      className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </FormField>
+
+                <FormField label="Query Session Price (₹)" required>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <DollarSign size={18} className="text-gray-400" />
+                    </div>
+                    <input
+                      type="number"
+                      name="queryPrice"
+                      value={formData.queryPrice}
+                      onChange={handleInputChange}
+                      required
+                      min="0"
+                      className="w-full h-12 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </FormField>
+
+                <div className="md:col-span-2">
+                  <FormField label="Professional Headline" required>
                     <input
                       type="text"
                       name="headline"
                       value={formData.headline}
                       onChange={handleInputChange}
                       required
-                      className="w-full h-12 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="A brief professional headline about yourself"
+                      placeholder="e.g. Senior PM @ Google helping aspiring product managers break into tech"
+                      className="w-full h-12 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </FormField>
                 </div>
 
-                {/* Bio */}
                 <div className="md:col-span-2">
-                  <FormField
-                    label="Bio/About you"
-                    required={true}
-                  >
+                  <FormField label="Bio & Background" required>
                     <div className="relative">
                       <div className="absolute top-3 left-3 pointer-events-none">
                         <FileText size={18} className="text-gray-400" />
@@ -425,106 +406,80 @@ const BecomeMentorPage = () => {
                         value={formData.bio}
                         onChange={handleInputChange}
                         required
-                        className="w-full h-32 pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Tell us about yourself, your expertise, and why you want to mentor others"
+                        className="w-full h-32 pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Tell prospective mentees about your journey, expertise, and what they can achieve through your sessions."
                       ></textarea>
                     </div>
                   </FormField>
                 </div>
 
-                {/* Social Media */}
-                <div className="md:col-span-2">
-                  <label className="block text-base font-medium text-gray-700 mb-2">
-                    Social Media Handles
-                  </label>
-                  
-                  <div className="space-y-3">
-                    {/* LinkedIn */}
-                    <div className="h-12 rounded-lg border border-gray-300 flex items-center overflow-hidden bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
-                      <div className="flex items-center justify-center ml-3 mr-2">
-                        <Linkedin size={20} className="text-blue-700" />
-                      </div>
-                      <div className="border-l border-gray-300 h-8"></div>
-                      <span className="mx-3 text-gray-500 text-sm">linkedin.com/in/</span>
+                {/* Social media handles */}
+                <div className="md:col-span-2 space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">Social Media & Portfolio</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="h-12 rounded-lg border border-gray-300 flex items-center px-3 bg-white">
+                      <Linkedin size={20} className="text-blue-700 mr-2" />
                       <input
                         type="text"
                         name="linkedin"
                         value={formData.socialMedia.linkedin}
                         onChange={handleSocialMediaChange}
-                        className="flex-1 h-full outline-none text-gray-800 pr-3"
-                        placeholder="your-profile"
+                        className="flex-1 outline-none text-sm text-gray-800"
+                        placeholder="linkedin.com/in/username"
                       />
                     </div>
-
-                    {/* YouTube */}
-                    <div className="h-12 rounded-lg border border-gray-300 flex items-center overflow-hidden bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
-                      <div className="flex items-center justify-center ml-3 mr-2">
-                        <Youtube size={20} className="text-red-600" />
-                      </div>
-                      <div className="border-l border-gray-300 h-8"></div>
-                      <span className="mx-3 text-gray-500 text-sm">youtube.com/</span>
+                    <div className="h-12 rounded-lg border border-gray-300 flex items-center px-3 bg-white">
+                      <Youtube size={20} className="text-red-600 mr-2" />
                       <input
                         type="text"
                         name="youtube"
                         value={formData.socialMedia.youtube}
                         onChange={handleSocialMediaChange}
-                        className="flex-1 h-full outline-none text-gray-800 pr-3"
-                        placeholder="your-channel"
+                        className="flex-1 outline-none text-sm text-gray-800"
+                        placeholder="youtube.com/@channel"
                       />
                     </div>
-
-                    {/* Facebook */}
-                    <div className="h-12 rounded-lg border border-gray-300 flex items-center overflow-hidden bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
-                      <div className="flex items-center justify-center ml-3 mr-2">
-                        <Facebook size={20} className="text-blue-600" />
-                      </div>
-                      <div className="border-l border-gray-300 h-8"></div>
-                      <span className="mx-3 text-gray-500 text-sm">facebook.com/</span>
+                    <div className="h-12 rounded-lg border border-gray-300 flex items-center px-3 bg-white">
+                      <Facebook size={20} className="text-blue-600 mr-2" />
                       <input
                         type="text"
                         name="facebook"
                         value={formData.socialMedia.facebook}
                         onChange={handleSocialMediaChange}
-                        className="flex-1 h-full outline-none text-gray-800 pr-3"
-                        placeholder="your-profile"
+                        className="flex-1 outline-none text-sm text-gray-800"
+                        placeholder="facebook.com/username"
                       />
                     </div>
-
-                    {/* Instagram */}
-                    <div className="h-12 rounded-lg border border-gray-300 flex items-center overflow-hidden bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
-                      <div className="flex items-center justify-center ml-3 mr-2">
-                        <Instagram size={20} className="text-pink-600" />
-                      </div>
-                      <div className="border-l border-gray-300 h-8"></div>
-                      <span className="mx-3 text-gray-500 text-sm">instagram.com/</span>
+                    <div className="h-12 rounded-lg border border-gray-300 flex items-center px-3 bg-white">
+                      <Instagram size={20} className="text-pink-600 mr-2" />
                       <input
                         type="text"
                         name="instagram"
                         value={formData.socialMedia.instagram}
                         onChange={handleSocialMediaChange}
-                        className="flex-1 h-full outline-none text-gray-800 pr-3"
-                        placeholder="your-username"
+                        className="flex-1 outline-none text-sm text-gray-800"
+                        placeholder="instagram.com/username"
                       />
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-center gap-4 mt-12">
+              <div className="flex justify-between items-center pt-6 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={handleBack}
-                  className="px-8 py-3 text-blue-600 border border-blue-600 rounded-lg text-base font-medium hover:bg-blue-50 transition-colors flex items-center gap-2"
+                  className="px-6 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2 cursor-pointer font-medium"
                 >
                   <ChevronLeft size={18} />
                   Back
                 </button>
                 <button
                   type="submit"
-                  className="px-8 py-3 bg-blue-600 text-white rounded-lg text-base font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  disabled={isSubmitting}
+                  className="px-8 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
                 >
-                  Next
+                  {isSubmitting ? 'Submitting...' : 'Submit Application'}
                   <ArrowRight size={18} />
                 </button>
               </div>
@@ -533,16 +488,9 @@ const BecomeMentorPage = () => {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="w-full bg-white border-t border-gray-200 py-8">
-        <div className="container mx-auto flex flex-col md:flex-row justify-between items-center px-4 md:px-8 lg:px-16 xl:px-24">
-          <div className="text-gray-600 text-sm md:text-base mb-4 md:mb-0">© 2025 SkillBridge. All Rights Reserved.</div>
-          <div className="flex flex-wrap justify-center gap-6 md:gap-8">
-            <a href="/privacy" className="text-gray-600 hover:text-blue-600 text-sm md:text-base transition-colors">Privacy Policy</a>
-            <a href="/terms" className="text-gray-600 hover:text-blue-600 text-sm md:text-base transition-colors">Terms of Service</a>
-            <a href="/contact" className="text-gray-600 hover:text-blue-600 text-sm md:text-base transition-colors">Contact Us</a>
-            <a href="/faq" className="text-gray-600 hover:text-blue-600 text-sm md:text-base transition-colors">FAQ</a>
-          </div>
+      <footer className="w-full bg-white border-t border-gray-200 py-6 mt-12">
+        <div className="container mx-auto text-center text-gray-500 text-sm">
+          © {new Date().getFullYear()} SkillBridge. All Rights Reserved.
         </div>
       </footer>
     </div>
@@ -552,7 +500,7 @@ const BecomeMentorPage = () => {
 const FormField = ({ label, required = false, children }) => {
   return (
     <div>
-      <label className="block text-base font-medium text-gray-700 mb-2">
+      <label className="block text-sm font-medium text-gray-700 mb-2">
         {label}{required && <span className="text-red-500 ml-1">*</span>}
       </label>
       {children}

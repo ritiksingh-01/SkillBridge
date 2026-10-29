@@ -8,7 +8,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 15000, // 15 second timeout
+  timeout: 15000,
 });
 
 // Add auth token to requests
@@ -24,26 +24,18 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error:', error);
-    
     if (error.response?.status === 401) {
+      const isAuthCheck = error.config?.url?.includes('/auth/me');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Only redirect if not already on login page
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/signUp') {
+      if (typeof window !== 'undefined' &&
+          !isAuthCheck &&
+          window.location.pathname !== '/login' &&
+          window.location.pathname !== '/signUp' &&
+          window.location.pathname !== '/') {
         window.location.href = '/login';
       }
     }
-    
-    // Handle network errors
-    if (!error.response) {
-      console.error('Network error - API might be down');
-      return Promise.reject({
-        message: 'Network error. Please check your connection.',
-        isNetworkError: true
-      });
-    }
-    
     return Promise.reject(error);
   }
 );
@@ -65,75 +57,20 @@ export const usersAPI = {
   getById: (id) => api.get(`/users/${id}`),
 };
 
-// Mentors API
+// Mentors API (no fake success wrapping F7, real routes F6)
 export const mentorsAPI = {
-  apply: (data) => api.post('/mentors', data),
-  getAll: (params = {}) => {
-    return api.get('/mentors', { params }).catch(error => {
-      console.error('Error fetching mentors:', error);
-      // Return empty data structure to prevent crashes
-      return {
-        data: {
-          success: true,
-          data: [],
-          count: 0,
-          total: 0,
-          pagination: {
-            current: 1,
-            pages: 0,
-            total: 0
-          }
-        }
-      };
-    });
-  },
+  apply: (data) => api.post('/mentors/apply', data),
+  getAll: (params = {}) => api.get('/mentors', { params }),
   getById: (id) => api.get(`/mentors/${id}`),
+  getMe: () => api.get('/mentors/profile/me'),
   updateProfile: (id, data) => api.put(`/mentors/${id}`, data),
-  getDashboardStats: () => {
-    return api.get('/mentors/dashboard/stats').catch(error => {
-      console.error('Error fetching mentor stats:', error);
-      return {
-        data: {
-          success: true,
-          data: {
-            stats: {
-              totalSessions: 0,
-              completedSessions: 0,
-              totalMentees: 0,
-              totalEarnings: 0,
-              rating: { average: 0, count: 0 },
-              responseTime: '~2 hours',
-              completionRate: 100
-            }
-          }
-        }
-      };
-    });
-  },
+  getDashboardStats: () => api.get('/mentors/dashboard/stats'),
 };
 
 // Sessions API
 export const sessionsAPI = {
   create: (data) => api.post('/sessions', data),
-  getAll: (params = {}) => {
-    return api.get('/sessions', { params }).catch(error => {
-      console.error('Error fetching sessions:', error);
-      // Return empty data structure to prevent crashes
-      return {
-        data: {
-          success: true,
-          data: {
-            sessions: [],
-            pagination: {
-              current: 1,
-              pages: 0,
-              total: 0
-            }
-          }
-        }
-      };
-    });
-  },
+  getAll: (params = {}) => api.get('/sessions', { params }),
   getById: (id) => api.get(`/sessions/${id}`),
   updateStatus: (id, data) => api.put(`/sessions/${id}/status`, data),
   update: (id, data) => api.put(`/sessions/${id}`, data),
@@ -151,26 +88,7 @@ export const messagesAPI = {
 
 // Notifications API
 export const notificationsAPI = {
-  getAll: (params = {}) => {
-    return api.get('/notifications', { params }).catch(error => {
-      console.error('Error fetching notifications:', error);
-      // Return empty data structure to prevent crashes
-      return {
-        data: {
-          success: true,
-          data: {
-            notifications: [],
-            unreadCount: 0,
-            pagination: {
-              current: 1,
-              pages: 0,
-              total: 0
-            }
-          }
-        }
-      };
-    });
-  },
+  getAll: (params = {}) => api.get('/notifications', { params }),
   create: (data) => api.post('/notifications', data),
   markAsRead: (id) => api.put(`/notifications/${id}/read`),
   markAllAsRead: () => api.put('/notifications/mark-all-read'),

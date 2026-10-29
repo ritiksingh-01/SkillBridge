@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 
 const SocketContext = createContext(null);
@@ -6,17 +6,16 @@ const SocketContext = createContext(null);
 export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
-  const socketRef = useRef();
+  const socketRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
 
+  // Initialize socket connection
   useEffect(() => {
-    // Use VITE_API_URL or fallback to localhost
     const ENDPOINT = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
-    
-    console.log('🔌 Connecting to socket server:', ENDPOINT);
-    
-    socketRef.current = io(ENDPOINT, {
+    const token = localStorage.getItem('token');
+
+    const socket = io(ENDPOINT, {
       withCredentials: true,
       transports: ['websocket', 'polling'],
       autoConnect: true,
@@ -24,89 +23,95 @@ export const SocketProvider = ({ children }) => {
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       timeout: 20000,
-    });
-
-    // Connection event handlers
-    socketRef.current.on('connect', () => {
-      console.log('✅ Socket connected:', socketRef.current.id);
-      setIsConnected(true);
-      setConnectionError(null);
-      
-      // Join user notification room if user is logged in
-      const user = JSON.parse(localStorage.getItem('user'));
-      if (user && user._id) {
-        console.log('🔔 Joining user room:', user._id);
-        socketRef.current.emit('join-user-room', user._id);
+      auth: {
+        token: token || undefined
       }
     });
 
-    socketRef.current.on('disconnect', (reason) => {
-      console.log('❌ Socket disconnected:', reason);
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      setIsConnected(true);
+      setConnectionError(null);
+
+      // Join user notification room using normalized id (F5)
+      try {
+        const rawUser = localStorage.getItem('user');
+        if (rawUser) {
+          const user = JSON.parse(rawUser);
+          const userId = user._id || user.id;
+          if (userId) {
+            socket.emit('join-user-room', userId);
+          }
+        }
+      } catch {
+        // Ignore parse error
+      }
+    });
+
+    socket.on('disconnect', () => {
       setIsConnected(false);
     });
 
-    socketRef.current.on('connect_error', (error) => {
-      console.error('🔌 Socket connection error:', error);
+    socket.on('connect_error', (error) => {
       setConnectionError(error.message);
       setIsConnected(false);
     });
 
-    socketRef.current.on('reconnect', (attemptNumber) => {
-      console.log('🔄 Socket reconnected after', attemptNumber, 'attempts');
+    socket.on('reconnect', () => {
       setIsConnected(true);
       setConnectionError(null);
-      
-      // Re-join user room after reconnection
-      const user = JSON.parse(localStorage.getItem('user'));
-      if (user && user._id) {
-        socketRef.current.emit('join-user-room', user._id);
+
+      try {
+        const rawUser = localStorage.getItem('user');
+        if (rawUser) {
+          const user = JSON.parse(rawUser);
+          const userId = user._id || user.id;
+          if (userId) {
+            socket.emit('join-user-room', userId);
+          }
+        }
+      } catch {
+        // Ignore
       }
     });
 
-    socketRef.current.on('reconnect_error', (error) => {
-      console.error('🔄 Socket reconnection error:', error);
-      setConnectionError(error.message);
-    });
-
-    // Cleanup on unmount
     return () => {
-      if (socketRef.current) {
-        console.log('🧹 Cleaning up socket connection');
-        socketRef.current.disconnect();
+      if (socket) {
+        socket.disconnect();
       }
     };
   }, []);
 
-  // Function to manually join a room
-  const joinRoom = (roomId) => {
-    if (socketRef.current && isConnected) {
-      console.log('🏠 Joining room:', roomId);
+  const joinUserRoom = useCallback((userId) => {
+    if (socketRef.current && userId) {
+      socketRef.current.emit('join-user-room', userId);
+    }
+  }, []);
+
+  const joinRoom = useCallback((roomId) => {
+    if (socketRef.current && roomId) {
       socketRef.current.emit('join-room', roomId);
     }
-  };
+  }, []);
 
-  // Function to leave a room
-  const leaveRoom = (roomId) => {
-    if (socketRef.current && isConnected) {
-      console.log('🚪 Leaving room:', roomId);
+  const leaveRoom = useCallback((roomId) => {
+    if (socketRef.current && roomId) {
       socketRef.current.emit('leave-room', roomId);
     }
-  };
+  }, []);
 
-  // Function to send a message
-  const sendMessage = (messageData) => {
-    if (socketRef.current && isConnected) {
-      console.log('📤 Sending message:', messageData);
+  const sendMessage = useCallback((messageData) => {
+    if (socketRef.current && messageData) {
       socketRef.current.emit('send-message', messageData);
-    } else {
-      console.error('❌ Cannot send message: socket not connected');
     }
-  };
+  }, []);
 
   const contextValue = {
     socket: socketRef.current,
     isConnected,
     connectionError,
+    joinUserRoom,
     joinRoom,
     leaveRoom,
     sendMessage,
@@ -117,4 +122,4 @@ export const SocketProvider = ({ children }) => {
       {children}
     </SocketContext.Provider>
   );
-}; 
+};

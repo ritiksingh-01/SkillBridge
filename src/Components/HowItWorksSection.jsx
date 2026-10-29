@@ -3,31 +3,6 @@ import { Search, Calendar, Award, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 
 const HowItWorksSection = () => {
-  // Define the steps for how the platform works
-  const steps = [
-    {
-      id: 1,
-      icon: <Search className="w-10 h-10 text-blue-600" />,
-      title: "Find Your Perfect Match",
-      description: "Browse our curated network of vetted mentors from top companies and filter by industry, expertise, and availability.",
-      hasArrow: true
-    },
-    {
-      id: 2,
-      icon: <Calendar className="w-10 h-10 text-blue-600" />,
-      title: "Schedule Sessions",
-      description: "Book one-on-one mentorship sessions that fit your calendar and connect via our secure video platform or messaging.",
-      hasArrow: true
-    },
-    {
-      id: 3,
-      icon: <Award className="w-10 h-10 text-blue-600" />,
-      title: "Grow & Achieve",
-      description: "Track your progress, complete action items, and reach your professional goals with structured guidance.",
-      hasArrow: false
-    }
-  ];
-
   return (
       <div className="w-full px-6 md:px-16 lg:px-24 py-20 bg-white">
         <div className="max-w-7xl mx-auto">

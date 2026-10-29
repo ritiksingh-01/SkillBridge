@@ -1,10 +1,16 @@
 const io = require('socket.io-client');
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
-// Test socket connection
+const JWT_SECRET = process.env.JWT_SECRET || 'skillbridge_dev_jwt_secret_key_1234567890';
+const testToken = jwt.sign({ id: 'test-user-123', role: 'mentee' }, JWT_SECRET);
+
+// Test socket connection with authenticated handshake (C4)
 const testSocketConnection = () => {
-  console.log('🧪 Testing Socket.io Connection...');
+  console.log('🧪 Testing Socket.io Connection with JWT Auth...');
   
   const socket = io('http://localhost:5000', {
+    auth: { token: testToken },
     transports: ['websocket', 'polling']
   });
 
@@ -23,7 +29,7 @@ const testSocketConnection = () => {
         roomId: 'test-room-456',
         sender: 'test-user-123',
         receiver: 'test-user-456',
-        content: 'Hello from test client!',
+        content: 'Hello from authenticated test client!',
         timestamp: new Date()
       });
     }, 1000);

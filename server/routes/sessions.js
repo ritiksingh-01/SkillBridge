@@ -22,33 +22,58 @@ router.post('/', auth, [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { mentorId, type, title, description, scheduledAt, duration, meetingType } = req.body;
+    const { mentorId, type, title, description, scheduledAt, duration = 60, meetingType = 'video' } = req.body;
 
-    // Find mentor and get pricing
     const mentor = await Mentor.findById(mentorId);
     if (!mentor) {
       return res.status(404).json({ message: 'Mentor not found' });
     }
 
-    const price = type === 'query' ? mentor.pricing.querySession : mentor.pricing.oneOnOneSession;
+    // Rule: Mentor cannot book session with themselves (H6)
+    if (mentor.user.toString() === req.user.id) {
+      return res.status(400).json({ message: 'You cannot book a session with yourself' });
+    }
+
+    // Rule: scheduledAt cannot be in the past (H6)
+    if (scheduledAt && type !== 'query') {
+      const scheduledDate = new Date(scheduledAt);
+      if (isNaN(scheduledDate.getTime()) || scheduledDate <= new Date()) {
+        return res.status(400).json({ message: 'Session must be scheduled for a future date and time' });
+      }
+    }
+
+    // Rule: validate duration (H6)
+    const validDuration = Math.min(Math.max(15, parseInt(duration) || 60), 240);
+
+    // Rule: group session vs one-on-one vs query pricing (H6)
+    let price = 500;
+    if (type === 'query') {
+      price = mentor.pricing?.querySession ?? 150;
+    } else if (type === 'group') {
+      price = mentor.pricing?.groupSession ?? 300;
+    } else {
+      price = mentor.pricing?.oneOnOneSession ?? 500;
+    }
 
     const session = new Session({
       mentee: req.user.id,
       mentor: mentorId,
       type,
       title,
-      description,
+      description: description || '',
       scheduledAt: type !== 'query' ? scheduledAt : undefined,
-      duration: duration || 60,
+      duration: validDuration,
       meetingType: meetingType || 'video',
       price
     });
 
     await session.save();
 
-    // Create notification for mentor
+    // Recipient of notification must be mentor.user (User ObjectId), NOT mentorId! (H1, H2)
+    const mentorUserId = mentor.user.toString();
+
     await createNotification(
-      mentorId,
+      mentorUserId,
       req.user.id,
       'session_request',
       'New Session Request',
@@ -56,10 +81,10 @@ router.post('/', auth, [
       { sessionId: session._id, title, scheduledAt }
     );
 
-    // Emit real-time notification
+    // Emit real-time notification to mentor's user room
     const io = req.app.get('io');
     if (io) {
-      io.to(mentorId).emit('new-notification', {
+      io.to(mentorUserId).emit('new-notification', {
         type: 'session_request',
         title: 'New Session Request',
         message: `You have a new session request from ${req.user.firstName} ${req.user.lastName}`,
@@ -68,13 +93,12 @@ router.post('/', auth, [
     }
 
     const populatedSession = await Session.findById(session._id)
-      .populate('mentee', 'firstName lastName profileImage')
-      .populate('mentor', 'user headline pricing')
+      .populate('mentee', 'firstName lastName profileImage email')
       .populate({
         path: 'mentor',
         populate: {
           path: 'user',
-          select: 'firstName lastName profileImage'
+          select: 'firstName lastName profileImage email'
         }
       });
 
@@ -83,24 +107,28 @@ router.post('/', auth, [
       session: populatedSession
     });
   } catch (error) {
-    console.error('Create session error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error creating session' });
   }
 });
 
 // @route   GET /api/sessions
-// @desc    Get user sessions
+// @desc    Get user sessions (for mentee or mentor)
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
-    const { status, type, page = 1, limit = 10 } = req.query;
-    
-    const query = {
-      $or: [
-        { mentee: req.user.id },
-        { 'mentor.user': req.user.id }
-      ]
-    };
+    const { status, type, page = 1, limit = 20 } = req.query;
+    const safeLimit = Math.min(Math.max(1, parseInt(limit) || 20), 100);
+    const safePage = Math.max(1, parseInt(page) || 1);
+
+    // Find mentor profile for current user if applicable (H1)
+    const mentorProfile = await Mentor.findOne({ user: req.user.id }).select('_id').lean();
+
+    const orConditions = [{ mentee: req.user.id }];
+    if (mentorProfile) {
+      orConditions.push({ mentor: mentorProfile._id });
+    }
+
+    const query = { $or: orConditions };
 
     if (status) {
       query.status = status;
@@ -110,32 +138,33 @@ router.get('/', auth, async (req, res) => {
       query.type = type;
     }
 
-    const sessions = await Session.find(query)
-      .populate('mentee', 'firstName lastName profileImage')
-      .populate({
-        path: 'mentor',
-        populate: {
-          path: 'user',
-          select: 'firstName lastName profileImage'
-        }
-      })
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .sort({ createdAt: -1 });
-
-    const total = await Session.countDocuments(query);
+    const [sessions, total] = await Promise.all([
+      Session.find(query)
+        .populate('mentee', 'firstName lastName profileImage email')
+        .populate({
+          path: 'mentor',
+          populate: {
+            path: 'user',
+            select: 'firstName lastName profileImage email headline'
+          }
+        })
+        .limit(safeLimit)
+        .skip((safePage - 1) * safeLimit)
+        .sort({ createdAt: -1 })
+        .lean(),
+      Session.countDocuments(query)
+    ]);
 
     res.json({
       sessions,
       pagination: {
-        current: parseInt(page),
-        pages: Math.ceil(total / limit),
+        current: safePage,
+        pages: Math.ceil(total / safeLimit),
         total
       }
     });
   } catch (error) {
-    console.error('Get sessions error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error retrieving sessions' });
   }
 });
 
@@ -150,7 +179,7 @@ router.get('/:id', auth, async (req, res) => {
         path: 'mentor',
         populate: {
           path: 'user',
-          select: 'firstName lastName profileImage email'
+          select: 'firstName lastName profileImage email headline'
         }
       });
 
@@ -158,23 +187,22 @@ router.get('/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'Session not found' });
     }
 
-    // Check if user is part of this session
+    const mentor = await Mentor.findById(session.mentor._id);
     const isMentee = session.mentee._id.toString() === req.user.id;
-    const isMentor = session.mentor.user._id.toString() === req.user.id;
+    const isMentor = mentor && mentor.user.toString() === req.user.id;
 
     if (!isMentee && !isMentor) {
-      return res.status(403).json({ message: 'Access denied' });
+      return res.status(403).json({ message: 'Access denied to this session' });
     }
 
     res.json({ session });
   } catch (error) {
-    console.error('Get session error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error retrieving session' });
   }
 });
 
 // @route   PUT /api/sessions/:id/status
-// @desc    Update session status
+// @desc    Update session status with transition rules & stats update (H6, H7, C6)
 // @access  Private
 router.put('/:id/status', auth, [
   body('status').isIn(['confirmed', 'cancelled', 'completed', 'in-progress']).withMessage('Invalid status')
@@ -192,8 +220,11 @@ router.put('/:id/status', auth, [
       return res.status(404).json({ message: 'Session not found' });
     }
 
-    // Check permissions
     const mentor = await Mentor.findById(session.mentor);
+    if (!mentor) {
+      return res.status(404).json({ message: 'Mentor associated with session not found' });
+    }
+
     const isMentee = session.mentee.toString() === req.user.id;
     const isMentor = mentor.user.toString() === req.user.id;
 
@@ -201,10 +232,20 @@ router.put('/:id/status', auth, [
       return res.status(403).json({ message: 'Access denied' });
     }
 
+    // State transition rules (H6)
+    if (session.status === 'cancelled' && status !== 'cancelled') {
+      return res.status(400).json({ message: 'Cancelled sessions cannot be transitioned to another status' });
+    }
+
+    // Confirming session requires paid status if not a free session or mentor manual approval
+    if (status === 'confirmed' && isMentee && session.paymentStatus !== 'paid' && session.price > 0) {
+      return res.status(400).json({ message: 'Session payment must be completed before confirming' });
+    }
+
     const updates = { status };
-    
-    if (status === 'cancelled' && cancellationReason) {
-      updates.cancellationReason = cancellationReason;
+
+    if (status === 'cancelled') {
+      updates.cancellationReason = cancellationReason || 'Cancelled by user';
     }
 
     if (status === 'in-progress') {
@@ -213,38 +254,65 @@ router.put('/:id/status', auth, [
 
     if (status === 'completed') {
       updates.actualEndTime = new Date();
+      // Increment mentor statistics when session completes (H7)
+      const totalSessionsCompleted = await Session.countDocuments({
+        mentor: mentor._id,
+        status: 'completed'
+      }) + 1;
+
+      const distinctMentees = await Session.distinct('mentee', {
+        mentor: mentor._id
+      });
+
+      const allSessionsCount = await Session.countDocuments({
+        mentor: mentor._id
+      });
+
+      const completionRate = allSessionsCount > 0
+        ? Math.round((totalSessionsCompleted / allSessionsCount) * 100)
+        : 100;
+
+      await Mentor.findByIdAndUpdate(mentor._id, {
+        $inc: { 'stats.totalSessions': 1 },
+        $set: {
+          'stats.totalMentees': distinctMentees.length,
+          'stats.completionRate': completionRate
+        }
+      });
     }
 
     const updatedSession = await Session.findByIdAndUpdate(
       req.params.id,
       updates,
       { new: true }
-    ).populate('mentee', 'firstName lastName')
+    ).populate('mentee', 'firstName lastName profileImage')
      .populate({
        path: 'mentor',
        populate: {
          path: 'user',
-         select: 'firstName lastName'
+         select: 'firstName lastName profileImage'
        }
      });
 
-    // Create notification for mentor
+    // Notify the OTHER participant with valid User ID (H1, H2)
+    const recipientUserId = isMentor ? session.mentee.toString() : mentor.user.toString();
+    const updaterName = isMentor ? 'Mentor' : 'Mentee';
+
     await createNotification(
-      session.mentor,
+      recipientUserId,
       req.user.id,
       'session_status_update',
       'Session Status Updated',
-      `Your session status has been updated to ${status}`,
+      `${updaterName} has updated the session status to ${status}`,
       { sessionId: session._id, status, cancellationReason }
     );
 
-    // Emit real-time notification
     const io = req.app.get('io');
     if (io) {
-      io.to(session.mentor).emit('new-notification', {
+      io.to(recipientUserId).emit('new-notification', {
         type: 'session_status_update',
         title: 'Session Status Updated',
-        message: `Your session status has been updated to ${status}`,
+        message: `${updaterName} has updated the session status to ${status}`,
         data: { sessionId: session._id, status, cancellationReason }
       });
     }
@@ -254,8 +322,74 @@ router.put('/:id/status', auth, [
       session: updatedSession
     });
   } catch (error) {
-    console.error('Update session status error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error updating session status' });
+  }
+});
+
+// @route   PUT /api/sessions/:id
+// @desc    Update session details (F6)
+// @access  Private
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const session = await Session.findById(req.params.id);
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+
+    const mentor = await Mentor.findById(session.mentor);
+    const isMentee = session.mentee.toString() === req.user.id;
+    const isMentor = mentor && mentor.user.toString() === req.user.id;
+
+    if (!isMentee && !isMentor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const allowed = ['title', 'description', 'scheduledAt', 'meetingType', 'meetingLink', 'notes'];
+    const updates = {};
+    allowed.forEach(field => {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    });
+
+    const updatedSession = await Session.findByIdAndUpdate(
+      req.params.id,
+      updates,
+      { new: true }
+    );
+
+    res.json({ message: 'Session updated successfully', session: updatedSession });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error updating session' });
+  }
+});
+
+// @route   DELETE /api/sessions/:id
+// @desc    Cancel/delete session (F6)
+// @access  Private
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const session = await Session.findById(req.params.id);
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+
+    const mentor = await Mentor.findById(session.mentor);
+    const isMentee = session.mentee.toString() === req.user.id;
+    const isMentor = mentor && mentor.user.toString() === req.user.id;
+
+    if (!isMentee && !isMentor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Mark as cancelled rather than deleting hard record
+    session.status = 'cancelled';
+    session.cancellationReason = req.body.reason || 'Cancelled by participant';
+    await session.save();
+
+    res.json({ message: 'Session cancelled successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error cancelling session' });
   }
 });
 

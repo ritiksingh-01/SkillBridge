@@ -112,14 +112,13 @@ const StatCard = ({ value, label, description }) => {
       { threshold: 0.3 }
     );
     
-    if (ref.current) {
-      observer.observe(ref.current);
+    const currentRef = ref.current;
+    if (currentRef) {
+      observer.observe(currentRef);
     }
     
     return () => {
-      if (ref.current) {
-        observer.disconnect();
-      }
+      observer.disconnect();
     };
   }, []);
 
@@ -152,32 +151,6 @@ const HomePage = () => {
   const [activeSkillCategory, setActiveSkillCategory] = useState("Technology");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
-  // Animation references
-  const heroRef = useRef();
-  const [isHeroInView, setIsHeroInView] = useState(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsHeroInView(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-    
-    if (heroRef.current) {
-      observer.observe(heroRef.current);
-    }
-    
-    return () => {
-      if (heroRef.current) {
-        observer.disconnect();
-      }
-    };
-  }, []);
-
   function handleLoginPage() {
     navigate('/login');
   }
@@ -452,7 +425,7 @@ const HomePage = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {successStats.map((stat, index) => (
+              {successStats.map((stat) => (
                 <StatCard 
                   key={stat.id} 
                   value={stat.value} 

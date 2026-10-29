@@ -14,11 +14,15 @@ const notificationSchema = new mongoose.Schema({
     type: String,
     enum: [
       'mentorship_request',
+      'session_request',
       'session_reminder',
       'session_confirmed',
       'session_cancelled',
+      'session_completed',
+      'session_status_update',
       'message_received',
       'payment_received',
+      'payment_success',
       'review_received',
       'profile_approved',
       'system_update'

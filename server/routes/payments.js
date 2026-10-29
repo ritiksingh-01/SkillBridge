@@ -1,17 +1,20 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const Session = require('../models/Session');
+const Mentor = require('../models/Mentor');
 const { auth } = require('../middleware/auth');
+const { createNotification } = require('./notifications');
 
 const router = express.Router();
 
-// Mock Stripe for development
+// Mock Stripe for local development when no API key is provided
 const mockStripe = {
   paymentIntents: {
     create: async (options) => {
+      const id = `pi_mock_${Date.now()}`;
       return {
-        id: `pi_mock_${Date.now()}`,
-        client_secret: `pi_mock_${Date.now()}_secret_${Math.random().toString(36).substr(2, 9)}`,
+        id,
+        client_secret: `${id}_secret_${Math.random().toString(36).substring(2, 11)}`,
         amount: options.amount,
         currency: options.currency,
         status: 'requires_payment_method',
@@ -21,24 +24,20 @@ const mockStripe = {
   },
   webhooks: {
     constructEvent: (payload, sig, secret) => {
-      // Mock webhook event
-      return {
-        type: 'payment_intent.succeeded',
-        data: {
-          object: {
-            id: 'pi_mock_123',
-            status: 'succeeded'
-          }
-        }
-      };
+      if (secret && (!sig || sig === 'invalid_sig')) {
+        throw new Error('Invalid Stripe signature');
+      }
+      return JSON.parse(payload.toString());
     }
   }
 };
 
-// Use real Stripe in production, mock in development
-const stripe = process.env.NODE_ENV === 'production' && process.env.STRIPE_SECRET_KEY 
-  ? require('stripe')(process.env.STRIPE_SECRET_KEY)
-  : mockStripe;
+const getStripeInstance = () => {
+  if (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.includes('your_stripe')) {
+    return require('stripe')(process.env.STRIPE_SECRET_KEY);
+  }
+  return mockStripe;
+};
 
 // @route   POST /api/payments/create-payment-intent
 // @desc    Create payment intent for session
@@ -60,7 +59,7 @@ router.post('/create-payment-intent', [
     const { sessionId } = req.body;
 
     const session = await Session.findById(sessionId)
-      .populate('mentor', 'user pricing')
+      .populate('mentor')
       .populate('mentee', 'firstName lastName email');
 
     if (!session) {
@@ -84,8 +83,9 @@ router.post('/create-payment-intent', [
       });
     }
 
+    const stripe = getStripeInstance();
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: session.price * 100, // Convert to cents
+      amount: Math.round(session.price * 100), // Convert INR to paise / cents
       currency: 'inr',
       metadata: {
         sessionId: session._id.toString(),
@@ -97,8 +97,6 @@ router.post('/create-payment-intent', [
     session.paymentId = paymentIntent.id;
     await session.save();
 
-    console.log('✅ Payment intent created for session:', sessionId);
-
     res.json({
       success: true,
       data: {
@@ -108,35 +106,37 @@ router.post('/create-payment-intent', [
       }
     });
   } catch (error) {
-    console.error('❌ Create payment intent error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error creating payment intent'
     });
   }
 });
 
-// @route   POST /api/payments/webhook
-// @desc    Handle Stripe webhooks
-// @access  Public
-router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+// Dedicated Webhook Handler - called with raw body before express.json() (C6)
+const handleWebhook = async (req, res) => {
   const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const stripe = getStripeInstance();
   let event;
 
   try {
-    if (process.env.NODE_ENV === 'production' && process.env.STRIPE_WEBHOOK_SECRET) {
-      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    if (process.env.NODE_ENV === 'production' && !webhookSecret) {
+      console.error('FATAL: STRIPE_WEBHOOK_SECRET is missing in production');
+      return res.status(500).send('Webhook secret misconfigured');
+    }
+
+    if (webhookSecret && webhookSecret !== 'whsec_your_webhook_secret') {
+      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
     } else {
-      // Mock event for development
-      event = {
+      // Development fallback
+      const payload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      event = payload.type ? payload : {
         type: 'payment_intent.succeeded',
         data: {
           object: {
-            id: 'pi_mock_123',
-            status: 'succeeded',
-            metadata: {
-              sessionId: 'mock_session_id'
-            }
+            id: payload.id || 'pi_mock_123',
+            status: 'succeeded'
           }
         }
       };
@@ -148,63 +148,74 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 
   try {
     switch (event.type) {
-      case 'payment_intent.succeeded':
+      case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object;
-        console.log('💰 Payment succeeded:', paymentIntent.id);
-        
-        await Session.findOneAndUpdate(
+        const updatedSession = await Session.findOneAndUpdate(
           { paymentId: paymentIntent.id },
-          { 
+          {
             paymentStatus: 'paid',
-            status: 'confirmed' // Auto-confirm session when payment succeeds
-          }
-        );
-        break;
+            status: 'confirmed'
+          },
+          { new: true }
+        ).populate('mentor');
 
-      case 'payment_intent.payment_failed':
+        if (updatedSession) {
+          const mentor = await Mentor.findById(updatedSession.mentor._id || updatedSession.mentor);
+          if (mentor) {
+            await createNotification(
+              mentor.user.toString(),
+              updatedSession.mentee.toString(),
+              'payment_received',
+              'Payment Received',
+              `Payment of ₹${updatedSession.price} received for session "${updatedSession.title}"`,
+              { sessionId: updatedSession._id }
+            );
+          }
+        }
+        break;
+      }
+
+      case 'payment_intent.payment_failed': {
         const failedPayment = event.data.object;
-        console.log('❌ Payment failed:', failedPayment.id);
-        
         await Session.findOneAndUpdate(
           { paymentId: failedPayment.id },
           { paymentStatus: 'failed' }
         );
         break;
+      }
 
-      case 'payment_intent.canceled':
+      case 'payment_intent.canceled': {
         const canceledPayment = event.data.object;
-        console.log('🚫 Payment canceled:', canceledPayment.id);
-        
         await Session.findOneAndUpdate(
           { paymentId: canceledPayment.id },
           { paymentStatus: 'failed' }
         );
         break;
+      }
 
       default:
-        console.log(`Unhandled event type ${event.type}`);
+        break;
     }
 
-    res.json({ 
+    res.json({
       success: true,
-      received: true 
+      received: true
     });
   } catch (error) {
-    console.error('❌ Webhook handler error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: 'Webhook handler failed' 
+      message: 'Webhook handler execution failed'
     });
   }
-});
+};
 
 // @route   GET /api/payments/session/:sessionId
-// @desc    Get payment status for session
+// @desc    Get payment status for session (H1)
 // @access  Private
 router.get('/session/:sessionId', auth, async (req, res) => {
   try {
     const session = await Session.findById(req.params.sessionId);
-    
+
     if (!session) {
       return res.status(404).json({
         success: false,
@@ -212,11 +223,13 @@ router.get('/session/:sessionId', auth, async (req, res) => {
       });
     }
 
-    // Check if user is authorized to view this payment
-    const isAuthorized = session.mentee.toString() === req.user.id || 
-                        session.mentor.toString() === req.user.id;
+    const mentor = await Mentor.findById(session.mentor);
 
-    if (!isAuthorized) {
+    // Mentor on session is Mentor ObjectId, compare user against mentor.user (H1)
+    const isMentee = session.mentee.toString() === req.user.id;
+    const isMentor = mentor && mentor.user.toString() === req.user.id;
+
+    if (!isMentee && !isMentor) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to view this payment'
@@ -232,12 +245,11 @@ router.get('/session/:sessionId', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ Get payment status error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error retrieving payment status'
     });
   }
 });
 
-module.exports = router;
+module.exports = { router, handleWebhook };

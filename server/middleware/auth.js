@@ -3,70 +3,47 @@ const User = require('../models/User');
 
 const auth = async (req, res, next) => {
   try {
-    // Simplified auth for development
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    
+    const authHeader = req.header('Authorization');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+
     if (!token) {
-      console.log('❌ No token provided');
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
-        message: 'No token, authorization denied' 
+        message: 'No authentication token provided, authorization denied'
       });
     }
 
-    // For development: handle simple token format
-    if (token.startsWith('simple_token_')) {
-      const tokenParts = token.split('_');
-      if (tokenParts.length >= 3) {
-        const userId = tokenParts[2];
-        
-        console.log('👤 Looking for user:', userId);
-        const user = await User.findById(userId).select('-password');
-        
-        if (!user) {
-          console.log('❌ User not found for token');
-          return res.status(401).json({ 
-            success: false,
-            message: 'Token is not valid' 
-          });
-        }
-
-        console.log('✅ User authenticated:', user.email);
-        req.user = user;
-        return next();
-      }
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      return res.status(500).json({
+        success: false,
+        message: 'JWT secret not configured on server'
+      });
     }
 
-    // Handle JWT tokens
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-      console.log('👤 JWT decoded for user:', decoded.id);
-      
+      const decoded = jwt.verify(token, secret);
       const user = await User.findById(decoded.id).select('-password');
-      
+
       if (!user) {
-        console.log('❌ User not found for JWT');
-        return res.status(401).json({ 
+        return res.status(401).json({
           success: false,
-          message: 'Token is not valid' 
+          message: 'Token user no longer exists'
         });
       }
 
-      console.log('✅ User authenticated via JWT:', user.email);
       req.user = user;
       next();
     } catch (jwtError) {
-      console.log('❌ JWT verification failed:', jwtError.message);
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
-        message: 'Token is not valid' 
+        message: jwtError.name === 'TokenExpiredError' ? 'Token expired' : 'Invalid token'
       });
     }
   } catch (error) {
-    console.error('❌ Auth middleware error:', error.message);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: 'Server error in authentication' 
+      message: 'Server error in authentication'
     });
   }
 };

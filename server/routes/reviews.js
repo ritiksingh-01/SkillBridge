@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const { body, validationResult } = require('express-validator');
 const Session = require('../models/Session');
 const Mentor = require('../models/Mentor');
@@ -28,7 +29,7 @@ router.post('/', [
     const { sessionId, rating, review } = req.body;
 
     const session = await Session.findById(sessionId)
-      .populate('mentor', 'user rating')
+      .populate('mentor')
       .populate('mentee');
 
     if (!session) {
@@ -57,6 +58,10 @@ router.post('/', [
     }
 
     // Check if review already exists
+    if (!session.feedback) {
+      session.feedback = {};
+    }
+
     if (isMentee && session.feedback.menteeRating) {
       return res.status(400).json({
         success: false,
@@ -83,17 +88,22 @@ router.post('/', [
     session.feedback.feedbackDate = new Date();
     await session.save();
 
-    // Update mentor's overall rating if mentee is reviewing
+    // Update mentor's overall rating atomically if mentee is reviewing (H5)
     if (isMentee && mentor) {
-      const totalRating = (mentor.rating.average * mentor.rating.count) + rating;
-      mentor.rating.count += 1;
-      mentor.rating.average = totalRating / mentor.rating.count;
-      await mentor.save();
+      const currentCount = mentor.rating?.count || 0;
+      const currentAvg = mentor.rating?.average || 0;
+      const newCount = currentCount + 1;
+      const newAverage = Math.round(((currentAvg * currentCount + rating) / newCount) * 10) / 10;
 
-      console.log(`✅ Updated mentor rating: ${mentor.rating.average} (${mentor.rating.count} reviews)`);
+      await Mentor.findByIdAndUpdate(mentor._id, {
+        $set: {
+          'rating.average': newAverage,
+          'rating.count': newCount
+        }
+      });
+      mentor.rating.average = newAverage;
+      mentor.rating.count = newCount;
     }
-
-    console.log('✅ Review submitted successfully');
 
     res.json({
       success: true,
@@ -104,10 +114,9 @@ router.post('/', [
       }
     });
   } catch (error) {
-    console.error('❌ Submit review error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error while submitting review'
     });
   }
 });
@@ -118,45 +127,58 @@ router.post('/', [
 router.get('/mentor/:mentorId', async (req, res) => {
   try {
     const { page = 1, limit = 10, rating } = req.query;
+    const safeLimit = Math.min(Math.max(1, parseInt(limit) || 10), 50);
+    const safePage = Math.max(1, parseInt(page) || 1);
+
+    if (!mongoose.Types.ObjectId.isValid(req.params.mentorId)) {
+      return res.status(400).json({ success: false, message: 'Invalid mentor ID' });
+    }
+
+    const mentorObjectId = new mongoose.Types.ObjectId(req.params.mentorId); // Fixed: add new keyword (H4)
 
     let query = {
-      mentor: req.params.mentorId,
+      mentor: mentorObjectId,
       'feedback.menteeRating': { $exists: true }
     };
 
-    if (rating) {
+    if (rating && !isNaN(parseInt(rating))) {
       query['feedback.menteeRating'] = parseInt(rating);
     }
 
     const sessions = await Session.find(query)
       .populate('mentee', 'firstName lastName profileImage')
       .select('feedback createdAt type title')
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
+      .limit(safeLimit)
+      .skip((safePage - 1) * safeLimit)
       .sort({ 'feedback.feedbackDate': -1 });
 
     const total = await Session.countDocuments(query);
 
     const reviews = sessions.map(session => ({
       id: session._id,
+      _id: session._id,
       rating: session.feedback.menteeRating,
       review: session.feedback.menteeReview,
       date: session.feedback.feedbackDate,
       sessionType: session.type,
       sessionTitle: session.title,
-      mentee: {
+      mentee: session.mentee ? {
         id: session.mentee._id,
+        _id: session.mentee._id,
         firstName: session.mentee.firstName,
         lastName: session.mentee.lastName,
         profileImage: session.mentee.profileImage
+      } : {
+        firstName: 'Anonymous',
+        lastName: 'Mentee'
       }
     }));
 
-    // Get rating distribution
+    // Get rating distribution with new mongoose.Types.ObjectId (H4)
     const ratingDistribution = await Session.aggregate([
       {
         $match: {
-          mentor: require('mongoose').Types.ObjectId(req.params.mentorId),
+          mentor: mentorObjectId,
           'feedback.menteeRating': { $exists: true }
         }
       },
@@ -171,25 +193,22 @@ router.get('/mentor/:mentorId', async (req, res) => {
       }
     ]);
 
-    console.log(`✅ Found ${reviews.length} reviews for mentor`);
-
     res.json({
       success: true,
       data: {
         reviews,
         ratingDistribution,
         pagination: {
-          current: parseInt(page),
-          pages: Math.ceil(total / limit),
+          current: safePage,
+          pages: Math.ceil(total / safeLimit),
           total
         }
       }
     });
   } catch (error) {
-    console.error('❌ Get mentor reviews error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error retrieving reviews'
     });
   }
 });
@@ -208,7 +227,7 @@ router.get('/session/:sessionId', auth, async (req, res) => {
           select: 'firstName lastName profileImage'
         }
       })
-      .select('feedback type title scheduledAt');
+      .select('feedback type title scheduledAt mentor mentee status');
 
     if (!session) {
       return res.status(404).json({
@@ -217,7 +236,6 @@ router.get('/session/:sessionId', auth, async (req, res) => {
       });
     }
 
-    // Check if user is authorized to view reviews
     const mentor = await Mentor.findById(session.mentor._id);
     const isMentee = session.mentee._id.toString() === req.user.id;
     const isMentor = mentor && mentor.user.toString() === req.user.id;
@@ -242,10 +260,9 @@ router.get('/session/:sessionId', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ Get session reviews error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error retrieving session review'
     });
   }
 });
@@ -280,6 +297,14 @@ router.put('/:sessionId', [
       });
     }
 
+    // Require completed session before review can be edited (H5)
+    if (session.status !== 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Can only review completed sessions'
+      });
+    }
+
     const isMentee = session.mentee.toString() === req.user.id;
     const mentor = await Mentor.findById(session.mentor._id);
     const isMentor = mentor && mentor.user.toString() === req.user.id;
@@ -291,7 +316,10 @@ router.put('/:sessionId', [
       });
     }
 
-    // Store old rating for mentor rating recalculation
+    if (!session.feedback) {
+      session.feedback = {};
+    }
+
     const oldRating = isMentee ? session.feedback.menteeRating : session.feedback.mentorRating;
 
     // Update session with new feedback
@@ -306,16 +334,31 @@ router.put('/:sessionId', [
     session.feedback.feedbackDate = new Date();
     await session.save();
 
-    // Update mentor's overall rating if mentee is updating review
-    if (isMentee && mentor && oldRating) {
-      const totalRating = (mentor.rating.average * mentor.rating.count) - oldRating + rating;
-      mentor.rating.average = totalRating / mentor.rating.count;
-      await mentor.save();
+    // Update mentor's overall rating handling both existing and new ratings (H5)
+    if (isMentee && mentor) {
+      const count = mentor.rating?.count || 0;
+      const currentAvg = mentor.rating?.average || 0;
 
-      console.log(`✅ Updated mentor rating: ${mentor.rating.average} (${mentor.rating.count} reviews)`);
+      let newCount = count;
+      let newAverage = rating;
+
+      if (oldRating && count > 0) {
+        const totalRating = (currentAvg * count) - oldRating + rating;
+        newAverage = Math.round((totalRating / count) * 10) / 10;
+      } else {
+        newCount = count + 1;
+        newAverage = Math.round(((currentAvg * count + rating) / newCount) * 10) / 10;
+      }
+
+      await Mentor.findByIdAndUpdate(mentor._id, {
+        $set: {
+          'rating.average': newAverage,
+          'rating.count': newCount
+        }
+      });
+      mentor.rating.average = newAverage;
+      mentor.rating.count = newCount;
     }
-
-    console.log('✅ Review updated successfully');
 
     res.json({
       success: true,
@@ -326,10 +369,9 @@ router.put('/:sessionId', [
       }
     });
   } catch (error) {
-    console.error('❌ Update review error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error updating review'
     });
   }
 });

@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Send, Paperclip, ArrowLeft, Search, Calendar, ChevronDown, MoreVertical, Phone, Video, Clock, Star, Filter } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Send,
+  Search,
+  Calendar,
+  ChevronDown,
+  Star
+} from 'lucide-react';
 import Header from '../../Components/Header';
 import Footer from '../../Components/Footer';
 import { useSocket } from '../../context/SocketContext';
-import { messagesAPI } from '../../services/api';
+import { messagesAPI, sessionsAPI, mentorsAPI } from '../../services/api';
 
 // Query Message Component
-const QueryMessage = ({ message, timestamp, onAttachment }) => {
+const QueryMessage = ({ message, timestamp }) => {
   return (
     <div className="flex justify-end mb-6">
       <div className="max-w-md">
@@ -16,21 +22,10 @@ const QueryMessage = ({ message, timestamp, onAttachment }) => {
               <span className="text-sm font-semibold">Q</span>
             </div>
             <div className="flex-1">
-              <div className="flex items-center space-x-2 mb-2">
-                <span className="text-sm font-semibold">Query</span>
-                <span className="text-xs bg-white bg-opacity-20 px-2 py-0.5 rounded-full">₹150</span>
-              </div>
               <p className="text-white text-sm leading-relaxed">{message}</p>
             </div>
           </div>
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-white border-opacity-20">
-            <button 
-              onClick={onAttachment}
-              className="flex items-center space-x-1 text-white text-opacity-80 hover:text-white transition-colors"
-            >
-              <Paperclip className="w-4 h-4" />
-              <span className="text-xs">Attachment</span>
-            </button>
+          <div className="flex items-center justify-end mt-2 pt-2 border-t border-white border-opacity-20">
             <span className="text-xs text-white text-opacity-70">{timestamp}</span>
           </div>
         </div>
@@ -46,13 +41,13 @@ const ResponseMessage = ({ message, timestamp }) => {
       <div className="max-w-md">
         <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md p-4 shadow-sm">
           <div className="mb-2">
-            <span className="text-sm font-semibold text-gray-700">Mentor Response</span>
+            <span className="text-sm font-semibold text-gray-700">Response</span>
           </div>
           <p className="text-gray-800 text-sm leading-relaxed mb-3">{message}</p>
           <div className="flex justify-between items-center text-xs text-gray-500">
             <span className="flex items-center space-x-1">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span>Response received</span>
+              <span>Received</span>
             </span>
             <span>{timestamp}</span>
           </div>
@@ -62,655 +57,493 @@ const ResponseMessage = ({ message, timestamp }) => {
   );
 };
 
-// Session Message Component
-const SessionMessage = ({ type, message, timestamp, duration }) => {
-  const isScheduled = type === 'scheduled';
+// Mentor Card in Sidebar
+const MentorListItem = ({ mentor, isSelected, onClick }) => {
   return (
-    <div className={`flex ${isScheduled ? 'justify-end' : 'justify-start'} mb-6`}>
-      <div className="max-w-md">
-        <div className={`${
-          isScheduled 
-            ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white' 
-            : 'bg-white border border-gray-200 text-gray-800'
-        } rounded-2xl p-4 shadow-sm`}>
-          <div className="flex items-start space-x-3">
-            <div className={`w-8 h-8 ${
-              isScheduled ? 'bg-white bg-opacity-20' : 'bg-purple-100'
-            } rounded-full flex items-center justify-center flex-shrink-0`}>
-              <Calendar className={`w-4 h-4 ${isScheduled ? 'text-white' : 'text-purple-600'}`} />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center space-x-2 mb-2">
-                <span className="text-sm font-semibold">
-                  {isScheduled ? '1:1 Session Scheduled' : 'Session Completed'}
-                </span>
-                {duration && (
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    isScheduled ? 'bg-white bg-opacity-20' : 'bg-purple-100 text-purple-600'
-                  }`}>
-                    {duration}
-                  </span>
-                )}
-              </div>
-              <p className="text-sm leading-relaxed">{message}</p>
-            </div>
-          </div>
-          <div className={`flex justify-end mt-3 pt-3 border-t ${
-            isScheduled ? 'border-white border-opacity-20' : 'border-gray-200'
-          }`}>
-            <span className={`text-xs ${
-              isScheduled ? 'text-white text-opacity-70' : 'text-gray-500'
-            }`}>{timestamp}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Message Input Component for Queries
-const QueryInput = ({ value, onChange, onSend, questionCount = 0, maxQuestions = 2 }) => {
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      onSend();
-    }
-  };
-
-  return (
-    <div className="border-t border-gray-200 p-4 bg-white">
-      <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-gray-700">
-            Ask Question ({questionCount}/{maxQuestions})
-          </span>
-          <div className="flex items-center space-x-2">
-            <div className="flex">
-              {[...Array(maxQuestions)].map((_, i) => (
-                <div
-                  key={i}
-                  className={`w-2 h-2 rounded-full mx-0.5 ${
-                    i < questionCount ? 'bg-blue-500' : 'bg-gray-300'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="flex items-end space-x-3">
-          <div className="flex-1">
-            <textarea
-              value={value}
-              onChange={onChange}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask your question here..."
-              className="w-full resize-none border-0 bg-transparent text-sm text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-0"
-              rows={2}
-              style={{ minHeight: '40px', maxHeight: '120px' }}
-              disabled={questionCount >= maxQuestions}
-            />
-          </div>
-          <button
-            onClick={onSend}
-            disabled={!value.trim() || questionCount >= maxQuestions}
-            className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-colors"
-          >
-            <Send className="w-4 h-4" />
-          </button>
-        </div>
-        {questionCount >= maxQuestions && (
-          <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-sm text-amber-700">
-              You've reached the maximum number of questions for this session. 
-              <button className="ml-1 text-blue-600 hover:underline">Upgrade to ask more</button>
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Session Input Component for 1:1 Sessions
-const SessionInput = ({ onScheduleSession }) => {
-  return (
-    <div className="border-t border-gray-200 p-4 bg-white">
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 border border-purple-200">
-        <div className="text-center">
-          <Calendar className="w-8 h-8 text-purple-600 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Schedule 1:1 Session</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Book a personalized session with your mentor
-          </p>
-          <div className="flex space-x-3">
-            <button
-              onClick={() => onScheduleSession('video')}
-              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-2"
-            >
-              <Video className="w-4 h-4" />
-              <span>Video Call</span>
-            </button>
-            <button
-              onClick={() => onScheduleSession('phone')}
-              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-2"
-            >
-              <Phone className="w-4 h-4" />
-              <span>Phone Call</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Enhanced Mentor Card Component
-const MentorCard = ({ mentor, isSelected, onClick }) => {
-  return (
-    <div 
+    <div
       onClick={() => onClick(mentor)}
-      className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-all duration-200 ${
-        isSelected ? 'bg-blue-50 border-r-4 border-r-blue-500 shadow-sm' : ''
+      className={`p-4 border-b border-gray-100 cursor-pointer transition-all hover:bg-blue-50/50 ${
+        isSelected ? 'bg-blue-50/80 border-l-4 border-l-blue-600' : 'bg-white'
       }`}
     >
       <div className="flex items-start space-x-3">
         <div className="relative">
-          <img 
+          <img
             src={mentor.avatar}
             alt={mentor.name}
-            className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-sm"
+            className="w-12 h-12 rounded-full object-cover border border-gray-200"
           />
-          <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
-            mentor.online ? 'bg-green-500' : 'bg-gray-400'
-          }`}></div>
+          <div
+            className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${
+              mentor.online ? 'bg-green-500' : 'bg-gray-400'
+            }`}
+          ></div>
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-gray-800 truncate">{mentor.name}</h3>
-              <p className="text-xs text-gray-600 truncate mt-0.5">{mentor.title}</p>
-              <div className="flex items-center space-x-2 mt-2">
-                <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  mentor.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 
-                  mentor.status === 'Active' ? 'bg-green-100 text-green-700' : 
-                  'bg-gray-100 text-gray-600'
-                }`}>
-                  {mentor.status}
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                  <span className="text-xs text-gray-600">{mentor.rating}</span>
-                </div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-xs text-gray-500">Due on</div>
-              <div className="text-xs font-medium text-gray-700">12 Sep 24</div>
-              <div className="text-xs text-gray-500">12:45 PM IST</div>
-            </div>
+          <div className="flex items-center justify-between">
+            <h4 className="font-semibold text-gray-900 truncate text-sm">{mentor.name}</h4>
+            <span
+              className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                mentor.status === 'confirmed' || mentor.status === 'Active'
+                  ? 'bg-green-100 text-green-700'
+                  : mentor.status === 'completed'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-amber-100 text-amber-700'
+              }`}
+            >
+              {mentor.status}
+            </span>
           </div>
+          <p className="text-xs text-gray-600 truncate mt-0.5">{mentor.title}</p>
+          <p className="text-xs text-blue-600 truncate mt-1">
+            {mentor.sessionTitle ? `Session: ${mentor.sessionTitle}` : ''}
+          </p>
         </div>
       </div>
-      {isSelected && (
-        <div className="mt-3 pt-3 border-t border-gray-200">
-          <div className="flex items-center space-x-2 text-xs text-gray-600">
-            <Clock className="w-3 h-3" />
-            <span>Response time: ~2 hours</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
-// Main Message Page Component
 const MessagePage = () => {
   const [message, setMessage] = useState('');
-  const [questionCount, setQuestionCount] = useState(1);
+  const [mentorsList, setMentorsList] = useState([]);
   const [selectedMentor, setSelectedMentor] = useState(null);
-  const [activeTab, setActiveTab] = useState('query'); // Fixed: Added state for tab switching
+  const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
-  const { socket, isConnected, joinRoom, leaveRoom, sendMessage } = useSocket();
-  const [userId, setUserId] = useState(null);
-  const [currentSessionId, setCurrentSessionId] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // Mock mentors data
-  const mentors = [
-    {
-      id: 1,
-      name: "Sarah Johnson",
-      title: "Director & Head - Global CyberSecurity Engineering at PepsiCo",
-      avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=60&h=60&fit=crop&crop=face&auto=format",
-      status: "Pending",
-      rating: 4.9,
-      online: true,
-      responseTime: "~2 hours"
-    },
-    {
-      id: 2,
-      name: "Michael Chen",
-      title: "Senior Software Engineer at Google, Ex-Facebook",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&h=60&fit=crop&crop=face&auto=format",
-      status: "Active",
-      rating: 4.8,
-      online: false,
-      responseTime: "~4 hours"
-    },
-    {
-      id: 3,
-      name: "David Rodriguez",
-      title: "Product Manager at Microsoft, MBA from Stanford",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face&auto=format",
-      status: "Pending",
-      rating: 4.7,
-      online: true,
-      responseTime: "~1 hour"
-    }
-  ];
+  const [queryMessages, setQueryMessages] = useState([]);
+  const currentSessionRef = useRef(null);
+  const { socket, joinRoom, leaveRoom } = useSocket();
 
-  // Mock messages data for different tabs
-  const [queryMessages, setQueryMessages] = useState([
-    {
-      id: 1,
-      type: 'query',
-      text: 'Is my resume perfect to apply for internship? Please help me to make a perfect resume.',
-      timestamp: '2:30 PM',
-      status: 'sent'
-    },
-    {
-      id: 2,
-      type: 'response',
-      text: 'This resume would not work anywhere. The formatting is incorrect, so is the colour coding and the way everything has been presented. I can make one for you, I\'d charge INR 599, and your resume would be ready by Sunday. You can use that to apply anywhere since that would be perfectly formatted and ATS compliant as well. Let me know if you want to go ahead.',
-      timestamp: '2:45 PM',
-      status: 'received'
-    }
-  ]);
-
-  const [sessionMessages, setSessionMessages] = useState([
-    {
-      id: 1,
-      type: 'scheduled',
-      text: 'Career guidance and resume review session scheduled for tomorrow at 3:00 PM',
-      timestamp: '1:15 PM',
-      duration: '60 min'
-    },
-    {
-      id: 2,
-      type: 'completed',
-      text: 'Great session on interview preparation! Thanks for all the tips.',
-      timestamp: 'Yesterday 4:30 PM',
-      duration: '45 min'
-    }
-  ]);
-
-  // Fetch user ID from localStorage or context (replace with your auth logic)
+  // Fetch real sessions from backend (F4)
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (user && user._id) setUserId(user._id);
+    const loadConversationsAndSessions = async () => {
+      try {
+        const sessRes = await sessionsAPI.getAll();
+        const rawSessions = sessRes.data?.sessions || [];
+
+        if (rawSessions.length > 0) {
+          const formatted = rawSessions.map(s => {
+            const rawUser = localStorage.getItem('user');
+            const currentUser = rawUser ? JSON.parse(rawUser) : null;
+            const currentUserId = currentUser?._id || currentUser?.id;
+
+            const isMentee = s.mentee?._id?.toString() === currentUserId?.toString();
+            const otherParty = isMentee
+              ? (s.mentor?.user || { firstName: 'Mentor', lastName: '' })
+              : (s.mentee || { firstName: 'Mentee', lastName: '' });
+
+            const otherName = `${otherParty.firstName || ''} ${otherParty.lastName || ''}`.trim() || 'User';
+
+            return {
+              id: s._id,
+              sessionId: s._id,
+              mentorId: s.mentor?._id,
+              receiverId: isMentee ? s.mentor?.user?._id : s.mentee?._id,
+              name: otherName,
+              title: s.mentor?.headline || s.mentor?.currentRole || s.type,
+              sessionTitle: s.title,
+              sessionType: s.type,
+              avatar: otherParty.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherName)}&background=3B82F6&color=fff`,
+              status: s.status,
+              rating: s.mentor?.rating?.average || 5.0,
+              online: true,
+              responseTime: '~2 hours'
+            };
+          });
+
+          setMentorsList(formatted);
+          if (formatted.length > 0) {
+            setSelectedMentor(prev => prev || formatted[0]);
+          }
+        } else {
+          // If no active sessions, load mentors as prospective conversations
+          const mentorsRes = await mentorsAPI.getAll();
+          const mentors = mentorsRes.data?.mentors || [];
+          const prospective = mentors.slice(0, 5).map(m => ({
+            id: m._id,
+            sessionId: null,
+            mentorId: m._id,
+            name: `${m.user?.firstName || ''} ${m.user?.lastName || ''}`.trim() || 'Mentor',
+            title: m.currentRole || m.headline || 'Industry Expert',
+            sessionTitle: 'General Mentorship',
+            sessionType: 'query',
+            avatar: m.user?.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.user?.firstName || 'M')}&background=3B82F6&color=fff`,
+            status: 'prospective',
+            rating: m.rating?.average || 5.0,
+            online: true,
+            responseTime: '~2 hours'
+          }));
+          setMentorsList(prospective);
+          if (prospective.length > 0) {
+            setSelectedMentor(prev => prev || prospective[0]);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading conversations:', err);
+      }
+    };
+
+    loadConversationsAndSessions();
   }, []);
 
-  // Fetch messages from backend when mentor is selected
+  // When selected conversation / session changes, join room and fetch messages (F4)
   useEffect(() => {
-    if (selectedMentor && userId) {
-      setIsLoading(true);
-      
-      // Create or get session ID for this user-mentor pair
-      const sessionId = `session_${[userId, selectedMentor.id].sort().join('_')}`;
-      setCurrentSessionId(sessionId);
-      
-      // Join room for this session
-      joinRoom(sessionId);
-      
-      // Fetch messages from backend
-      messagesAPI.getBySession(sessionId)
-        .then(res => {
-          if (res.data && Array.isArray(res.data.messages)) {
-            setQueryMessages(res.data.messages.map(msg => ({
+    if (!selectedMentor) return;
+
+    const sessionId = selectedMentor.sessionId;
+    if (!sessionId) {
+      setQueryMessages([
+        {
+          id: 'welcome',
+          type: 'response',
+          text: `Welcome! You can book a session with ${selectedMentor.name} or send a question below.`,
+          timestamp: 'Just now',
+          status: 'received'
+        }
+      ]);
+      return;
+    }
+
+    // Leave previous session room cleanly (F4)
+    if (currentSessionRef.current && currentSessionRef.current !== sessionId) {
+      leaveRoom(currentSessionRef.current);
+    }
+
+    currentSessionRef.current = sessionId;
+    joinRoom(sessionId);
+
+    // Fetch real session messages (F4)
+    messagesAPI.getBySession(sessionId)
+      .then(res => {
+        if (res.data?.messages) {
+          const rawUser = localStorage.getItem('user');
+          const currentUser = rawUser ? JSON.parse(rawUser) : null;
+          const currentUid = currentUser?._id || currentUser?.id;
+
+          const formatted = res.data.messages.map(msg => {
+            const senderId = typeof msg.sender === 'object' ? (msg.sender?._id || msg.sender?.id) : msg.sender;
+            const isSelf = senderId?.toString() === currentUid?.toString();
+
+            return {
               id: msg._id,
-              type: msg.sender === userId ? 'query' : 'response',
+              type: isSelf ? 'query' : 'response',
               text: msg.content,
               timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              status: msg.sender === userId ? 'sent' : 'received',
-            })));
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching messages:', error);
-          // Keep existing messages if API fails
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    }
-    
-    // Cleanup: leave room when mentor changes
+              status: isSelf ? 'sent' : 'received'
+            };
+          });
+          setQueryMessages(formatted);
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching session messages:', err);
+      });
+
     return () => {
-      if (currentSessionId) {
-        leaveRoom(currentSessionId);
+      if (currentSessionRef.current) {
+        leaveRoom(currentSessionRef.current);
       }
     };
-  }, [selectedMentor, userId, joinRoom, leaveRoom]);
+  }, [selectedMentor, joinRoom, leaveRoom]);
 
-  // Listen for incoming messages
+  // Listen to socket events for new messages - both 'new-message' and 'receive-message' (F4)
   useEffect(() => {
     if (!socket) return;
-    
-    const handleReceiveMessage = (data) => {
-      console.log('📨 Received message:', data);
-      if (currentSessionId && data.session === currentSessionId) {
-        setQueryMessages(prev => ([
-          ...prev,
-          {
-            id: data._id || Date.now(),
-            type: data.sender === userId ? 'query' : 'response',
-            text: data.content,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            status: data.sender === userId ? 'sent' : 'received',
+
+    const handleIncomingMessage = (data) => {
+      if (!data) return;
+
+      const rawUser = localStorage.getItem('user');
+      const currentUser = rawUser ? JSON.parse(rawUser) : null;
+      const currentUid = currentUser?._id || currentUser?.id;
+
+      const dataSessionId = data.session?._id || data.session || data.sessionId || data.roomId;
+      if (currentSessionRef.current && dataSessionId?.toString() === currentSessionRef.current?.toString()) {
+        const senderId = typeof data.sender === 'object' ? (data.sender?._id || data.sender?.id) : data.sender;
+        const isSelf = senderId?.toString() === currentUid?.toString();
+
+        setQueryMessages(prev => {
+          // Avoid duplicate messages
+          if (prev.some(m => m.id === (data._id || data.id))) {
+            return prev;
           }
-        ]));
-      }
-    };
-
-    const handleMessageSent = (data) => {
-      console.log('✅ Message sent confirmation:', data);
-    };
-
-    socket.on('receive-message', handleReceiveMessage);
-    socket.on('message-sent', handleMessageSent);
-    
-    return () => {
-      socket.off('receive-message', handleReceiveMessage);
-      socket.off('message-sent', handleMessageSent);
-    };
-  }, [socket, currentSessionId, userId]);
-
-  // Filter mentors based on search and status
-  const filteredMentors = mentors.filter(mentor => {
-    const matchesSearch = mentor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         mentor.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'All' || mentor.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
-
-  // Send message via socket and API
-  const handleSendMessage = async () => {
-    if (message.trim() && questionCount < 2 && selectedMentor && userId && currentSessionId) {
-      const messageData = {
-        sessionId: currentSessionId,
-        content: message,
-        receiverId: selectedMentor.id,
-        messageType: 'text'
-      };
-
-      try {
-        // Send via API first
-        const response = await messagesAPI.send(messageData);
-        
-        if (response.data && response.data.data) {
-          // Add message to local state
-          setQueryMessages(prev => ([
+          return [
             ...prev,
             {
-              id: response.data.data._id || Date.now(),
-              type: 'query',
-              text: message,
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              status: 'sent',
+              id: data._id || data.id || Date.now(),
+              type: isSelf ? 'query' : 'response',
+              text: data.content || data.message || '',
+              timestamp: new Date(data.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              status: isSelf ? 'sent' : 'received'
             }
-          ]));
-          
-          setMessage('');
-          setQuestionCount(prev => prev + 1);
-        }
-      } catch (error) {
-        console.error('Error sending message:', error);
-        // Show error message to user
-        alert('Failed to send message. Please try again.');
+          ];
+        });
       }
+    };
+
+    socket.on('new-message', handleIncomingMessage);
+    socket.on('receive-message', handleIncomingMessage);
+
+    return () => {
+      socket.off('new-message', handleIncomingMessage);
+      socket.off('receive-message', handleIncomingMessage);
+    };
+  }, [socket]);
+
+  // Send message via API and real-time socket (F4)
+  const handleSendMessage = async () => {
+    if (!message.trim() || !selectedMentor) return;
+
+    let targetSessionId = selectedMentor.sessionId;
+
+    // If no existing session, create a query session automatically
+    if (!targetSessionId && selectedMentor.mentorId) {
+      try {
+        const newSessionRes = await sessionsAPI.create({
+          mentorId: selectedMentor.mentorId,
+          type: 'query',
+          title: 'Direct Query',
+          description: message
+        });
+        targetSessionId = newSessionRes.data?.session?._id;
+        setSelectedMentor(prev => ({ ...prev, sessionId: targetSessionId }));
+      } catch (err) {
+        console.error('Failed to initialize session for message:', err);
+      }
+    }
+
+    if (!targetSessionId) {
+      alert('Could not start message session. Please book a session first.');
+      return;
+    }
+
+    const contentToSend = message;
+    setMessage('');
+
+    try {
+      const response = await messagesAPI.send({
+        sessionId: targetSessionId,
+        content: contentToSend,
+        messageType: 'text'
+      });
+
+      if (response.data?.data) {
+        const savedMsg = response.data.data;
+        setQueryMessages(prev => [
+          ...prev,
+          {
+            id: savedMsg._id || Date.now(),
+            type: 'query',
+            text: contentToSend,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: 'sent'
+          }
+        ]);
+      }
+    } catch (err) {
+      console.error('Error sending message:', err);
+      setMessage(contentToSend);
+      alert('Failed to send message. Please try again.');
     }
   };
 
-  const handleScheduleSession = (type) => {
-    const newSession = {
-      id: sessionMessages.length + 1,
-      type: 'scheduled',
-      text: `New ${type === 'video' ? 'video' : 'phone'} session scheduled with ${selectedMentor?.name}`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      duration: '60 min'
-    };
-    setSessionMessages([...sessionMessages, newSession]);
-  };
-
-  const handleAttachment = () => {
-    console.log('Attachment clicked');
-  };
-
-  const handleMentorSelect = (mentor) => {
-    setSelectedMentor(mentor);
-  };
-
-  const handleTabSwitch = (tab) => {
-    setActiveTab(tab);
-  };
+  const filteredMentors = mentorsList.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          item.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'All' || item.status?.toLowerCase() === filterStatus.toLowerCase();
+    const matchesTab = activeTab === 'all' || item.sessionType === activeTab;
+    return matchesSearch && matchesStatus && matchesTab;
+  });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <Header/>
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-between">
+      <div>
+        <Header />
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8 mt-20">
-        {/* Page Title */}
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">Mentor Sessions</h2>
-        </div>
+        <div className="max-w-7xl mx-auto px-6 py-8 mt-20">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-bold text-gray-900">Messages & Sessions</h2>
+          </div>
 
-        {/* Navigation Tabs */}
-        <div className="border-b border-gray-200 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex space-x-0">
-              <button 
-                onClick={() => handleTabSwitch('query')}
-                className={`px-6 py-3 text-lg font-medium border-b-2 transition-colors ${
-                  activeTab === 'query' 
-                    ? 'text-blue-600 border-blue-500' 
-                    : 'text-gray-600 border-transparent hover:text-gray-800'
-                }`}
-              >
-                Query Sessions
-              </button>
-              <button 
-                onClick={() => handleTabSwitch('session')}
-                className={`px-6 py-3 text-lg font-medium border-b-2 transition-colors ${
-                  activeTab === 'session' 
-                    ? 'text-blue-600 border-blue-500' 
-                    : 'text-gray-600 border-transparent hover:text-gray-800'
-                }`}
-              >
-                1:1 Sessions
-              </button>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Filter by:</span>
-              <div className="relative">
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          {/* Navigation Tabs */}
+          <div className="border-b border-gray-200 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setActiveTab('all')}
+                  className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+                    activeTab === 'all'
+                      ? 'text-blue-600 border-blue-600'
+                      : 'text-gray-600 border-transparent hover:text-gray-800'
+                  }`}
                 >
-                  <option value="All">All Status</option>
-                  <option value="Active">Active</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Completed">Completed</option>
-                </select>
-                <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  All Conversations
+                </button>
+                <button
+                  onClick={() => setActiveTab('query')}
+                  className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+                    activeTab === 'query'
+                      ? 'text-blue-600 border-blue-600'
+                      : 'text-gray-600 border-transparent hover:text-gray-800'
+                  }`}
+                >
+                  Queries
+                </button>
+                <button
+                  onClick={() => setActiveTab('one-on-one')}
+                  className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+                    activeTab === 'one-on-one'
+                      ? 'text-blue-600 border-blue-600'
+                      : 'text-gray-600 border-transparent hover:text-gray-800'
+                  }`}
+                >
+                  1:1 Sessions
+                </button>
+              </div>
+
+              <div className="flex items-center space-x-4">
+                <div className="relative">
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="All">All Statuses</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                  <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Search Bar */}
-        <div className="mb-8">
-          <div className="relative w-96">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search mentors..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl text-sm text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+          {/* Search Bar */}
+          <div className="mb-6">
+            <div className="relative w-96">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search conversations..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Split Layout */}
-        <div className="flex bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden" style={{ height: '700px' }}>
-          {/* Left Side - Mentor List */}
-          <div className="w-2/5 border-r border-gray-200 bg-gray-50">
-            <div className="p-4 border-b border-gray-200 bg-white">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-800">
-                  {activeTab === 'query' ? 'Query Mentors' : 'Session Mentors'}
-                </h3>
-                <span className="text-sm text-gray-500">
-                  {filteredMentors.length} available
-                </span>
+          {/* Split Layout */}
+          <div className="flex bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden" style={{ height: '650px' }}>
+            {/* Left Side: Session Conversations List */}
+            <div className="w-2/5 border-r border-gray-200 bg-gray-50 flex flex-col">
+              <div className="p-4 border-b border-gray-200 bg-white flex justify-between items-center">
+                <h3 className="font-semibold text-gray-800">Conversations</h3>
+                <span className="text-xs text-gray-500">{filteredMentors.length} active</span>
+              </div>
+              <div className="overflow-y-auto flex-1">
+                {filteredMentors.length > 0 ? (
+                  filteredMentors.map((m) => (
+                    <MentorListItem
+                      key={m.id || m.sessionId}
+                      mentor={m}
+                      isSelected={selectedMentor?.id === m.id}
+                      onClick={setSelectedMentor}
+                    />
+                  ))
+                ) : (
+                  <div className="p-8 text-center text-gray-500 text-sm">
+                    No active sessions found. Find a mentor and book a session to chat!
+                  </div>
+                )}
               </div>
             </div>
-            <div className="overflow-y-auto" style={{ height: 'calc(700px - 80px)' }}>
-              {filteredMentors.length > 0 ? (
-                filteredMentors.map((mentor) => (
-                  <MentorCard
-                    key={mentor.id}
-                    mentor={mentor}
-                    isSelected={selectedMentor?.id === mentor.id}
-                    onClick={handleMentorSelect}
-                  />
-                ))
+
+            {/* Right Side: Chat Window */}
+            <div className="w-3/5 flex flex-col">
+              {selectedMentor ? (
+                <>
+                  {/* Chat Header */}
+                  <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+                    <div className="flex items-center space-x-3">
+                      <div className="relative">
+                        <img
+                          src={selectedMentor.avatar}
+                          alt={selectedMentor.name}
+                          className="w-10 h-10 rounded-full object-cover border"
+                        />
+                        <div
+                          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                            selectedMentor.online ? 'bg-green-500' : 'bg-gray-400'
+                          }`}
+                        ></div>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-gray-900 text-sm">{selectedMentor.name}</h4>
+                        <p className="text-xs text-gray-500">{selectedMentor.title}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs px-2.5 py-1 bg-blue-50 text-blue-700 font-medium rounded-full">
+                        {selectedMentor.sessionTitle || 'Active'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Messages Feed */}
+                  <div className="flex-1 p-6 overflow-y-auto bg-gray-50">
+                    {queryMessages.length === 0 ? (
+                      <div className="text-center py-16 text-gray-400 text-sm">
+                        No messages in this session yet. Say hello!
+                      </div>
+                    ) : (
+                      queryMessages.map((msg) =>
+                        msg.type === 'query' ? (
+                          <QueryMessage key={msg.id} message={msg.text} timestamp={msg.timestamp} />
+                        ) : (
+                          <ResponseMessage key={msg.id} message={msg.text} timestamp={msg.timestamp} />
+                        )
+                      )
+                    )}
+                  </div>
+
+                  {/* Chat Input */}
+                  <div className="border-t border-gray-200 p-4 bg-white">
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="text"
+                        placeholder="Type your message..."
+                        className="flex-1 p-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendMessage();
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={handleSendMessage}
+                        className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors cursor-pointer flex items-center justify-center"
+                      >
+                        <Send className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </>
               ) : (
-                <div className="p-8 text-center">
-                  <div className="text-gray-400 mb-2">No mentors found</div>
-                  <div className="text-sm text-gray-500">Try adjusting your search or filter</div>
+                <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
+                  Select a session or mentor to start chatting.
                 </div>
               )}
             </div>
           </div>
-
-          {/* Right Side - Chat Interface */}
-          <div className="w-3/5 flex flex-col">
-            {selectedMentor ? (
-              <>
-                {/* Chat Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white">
-                  <div className="flex items-center space-x-4">
-                    <div className="relative">
-                      <img 
-                        src={selectedMentor.avatar}
-                        alt={selectedMentor.name}
-                        className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
-                      />
-                      <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
-                        selectedMentor.online ? 'bg-green-500' : 'bg-gray-400'
-                      }`}></div>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-800">{selectedMentor.name}</h3>
-                      <p className="text-sm text-gray-600">{selectedMentor.title}</p>
-                      <div className="flex items-center space-x-3 mt-1">
-                        <div className="flex items-center space-x-1">
-                          <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                          <span className="text-xs text-gray-600">{selectedMentor.rating}</span>
-                        </div>
-                        <span className="text-xs text-gray-500">•</span>
-                        <span className="text-xs text-gray-500">{selectedMentor.responseTime}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      selectedMentor.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 
-                      selectedMentor.status === 'Active' ? 'bg-green-100 text-green-700' : 
-                      'bg-gray-100 text-gray-600'
-                    }`}>
-                      {selectedMentor.status}
-                    </div>
-                    {activeTab === 'session' && (
-                      <button className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2">
-                        <Calendar className="w-4 h-4" />
-                        <span>Schedule</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Messages Container */}
-                <div className="flex-1 p-6 overflow-y-auto bg-gray-50">
-                  {activeTab === 'query' ? (
-                    queryMessages.map((msg) => (
-                      msg.type === 'query' ? (
-                        <QueryMessage
-                          key={msg.id}
-                          message={msg.text}
-                          timestamp={msg.timestamp}
-                          onAttachment={handleAttachment}
-                        />
-                      ) : (
-                        <ResponseMessage
-                          key={msg.id}
-                          message={msg.text}
-                          timestamp={msg.timestamp}
-                        />
-                      )
-                    ))
-                  ) : (
-                    sessionMessages.map((msg) => (
-                      <SessionMessage
-                        key={msg.id}
-                        type={msg.type}
-                        message={msg.text}
-                        timestamp={msg.timestamp}
-                        duration={msg.duration}
-                      />
-                    ))
-                  )}
-                </div>
-
-                {/* Message Input */}
-                {activeTab === 'query' ? (
-                  <QueryInput
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onSend={handleSendMessage}
-                    questionCount={questionCount}
-                    maxQuestions={2}
-                  />
-                ) : (
-                  <SessionInput onScheduleSession={handleScheduleSession} />
-                )}
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-                <div className="text-center max-w-md">
-                  <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Search className="w-10 h-10 text-blue-500" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-800 mb-3">
-                    Select a mentor to start
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    Choose a mentor from the list to {activeTab === 'query' ? 'ask questions' : 'schedule a session'} and get personalized guidance for your career journey.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
-      {/* Footer */}
-      <Footer/>
+      <Footer />
     </div>
   );
 };

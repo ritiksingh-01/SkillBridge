@@ -101,8 +101,10 @@ const sessionSchema = new mongoose.Schema({
 });
 
 // Index for efficient queries
+sessionSchema.index({ mentee: 1, createdAt: -1 });
+sessionSchema.index({ mentor: 1, createdAt: -1 });
 sessionSchema.index({ mentee: 1, status: 1 });
-sessionSchema.index({ mentor: 1, status: 1 });
+sessionSchema.index({ mentor: 1, status: 1, paymentStatus: 1 });
 sessionSchema.index({ scheduledAt: 1 });
 
 // Calculate session duration

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authAPI } from '../services/api';
 
 const AuthContext = createContext();
@@ -11,110 +11,113 @@ export const useAuth = () => {
   return context;
 };
 
+// Normalize user object so both .id and ._id are always available
+const normalizeUser = (userData) => {
+  if (!userData) return null;
+  const id = userData._id || userData.id;
+  return {
+    ...userData,
+    id,
+    _id: id
+  };
+};
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
+  const [user, setUser] = useState(() => {
     try {
-      const token = localStorage.getItem('token');
-      const userData = localStorage.getItem('user');
-      
-      if (token && userData) {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
+      const stored = localStorage.getItem('user');
+      return stored ? normalizeUser(JSON.parse(stored)) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return Boolean(localStorage.getItem('token'));
+  });
+  const [loading, setLoading] = useState(false);
+
+  const checkAuth = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setUser(null);
+      setIsAuthenticated(false);
+      return;
+    }
+
+    try {
+      // Validate session with server (F11)
+      const res = await authAPI.getMe();
+      if (res.data?.user) {
+        const normalized = normalizeUser(res.data.user);
+        setUser(normalized);
         setIsAuthenticated(true);
+        localStorage.setItem('user', JSON.stringify(normalized));
       }
-    } catch (error) {
-      console.error('Auth check error:', error);
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+    } catch (err) {
+      // ONLY clear token if server explicitly rejected it with 401
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
+        setIsAuthenticated(false);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const login = async (credentials) => {
     try {
-      console.log('🔐 Attempting login with:', credentials.email);
-      
       const response = await authAPI.login(credentials);
-      console.log('✅ Login response:', response.data);
-      
-      const { token, user } = response.data;
-      
+      const { token, user: rawUser } = response.data;
+
+      const normalized = normalizeUser(rawUser);
       localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      
-      setUser(user);
+      localStorage.setItem('user', JSON.stringify(normalized));
+
+      setUser(normalized);
       setIsAuthenticated(true);
-      
-      return { success: true, user };
+
+      return { success: true, user: normalized };
     } catch (error) {
-      console.error('❌ Login error:', error);
-      
-      // Handle different types of errors
-      if (error.response) {
-        // Server responded with error status
-        const errorMessage = error.response.data?.message || 'Login failed';
-        return { success: false, error: errorMessage };
-      } else if (error.request) {
-        // Network error
-        return { success: false, error: 'Network error. Please check your connection.' };
-      } else {
-        // Other error
-        return { success: false, error: error.message || 'Login failed' };
+      if (error.response?.data?.message) {
+        return { success: false, error: error.response.data.message };
       }
+      return { success: false, error: 'Login failed. Please check your credentials.' };
     }
   };
 
   const register = async (userData) => {
     try {
-      console.log('📝 Attempting registration with:', userData.email);
-      
       const response = await authAPI.register(userData);
-      console.log('✅ Registration response:', response.data);
-      
-      const { token, user } = response.data;
-      
+      const { token, user: rawUser } = response.data;
+
+      const normalized = normalizeUser(rawUser);
       localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      
-      setUser(user);
+      localStorage.setItem('user', JSON.stringify(normalized));
+
+      setUser(normalized);
       setIsAuthenticated(true);
-      
-      return { success: true, user };
+
+      return { success: true, user: normalized };
     } catch (error) {
-      console.error('❌ Registration error:', error);
-      
-      // Handle different types of errors
-      if (error.response) {
-        // Server responded with error status
-        const errorMessage = error.response.data?.message || 'Registration failed';
-        return { success: false, error: errorMessage };
-      } else if (error.request) {
-        // Network error
-        return { success: false, error: 'Network error. Please check your connection.' };
-      } else {
-        // Other error
-        return { success: false, error: error.message || 'Registration failed' };
+      if (error.response?.data?.message) {
+        return { success: false, error: error.response.data.message };
       }
+      return { success: false, error: 'Registration failed. Please check your details.' };
     }
   };
 
   const logout = async () => {
     try {
-      // Call logout API
       await authAPI.logout();
-    } catch (error) {
-      console.error('Logout API error:', error);
+    } catch {
+      // Ignore network errors on logout
     } finally {
-      // Always clear local storage and state
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       setUser(null);
@@ -123,8 +126,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateUser = (userData) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
+    const normalized = normalizeUser(userData);
+    setUser(normalized);
+    localStorage.setItem('user', JSON.stringify(normalized));
   };
 
   const value = {

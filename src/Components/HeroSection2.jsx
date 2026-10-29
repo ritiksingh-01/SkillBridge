@@ -24,14 +24,13 @@ const HeroSection2 = () => {
       { threshold: 0.1 }
     );
 
-    if (heroRef.current) {
-      observer.observe(heroRef.current);
+    const currentHero = heroRef.current;
+    if (currentHero) {
+      observer.observe(currentHero);
     }
 
     return () => {
-      if (heroRef.current) {
-        observer.disconnect();
-      }
+      observer.disconnect();
     };
   }, []);
 
