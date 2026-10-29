@@ -2,7 +2,7 @@ import './App.css';
 import { createBrowserRouter, RouterProvider, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
-import ProtectedRoute from './Components/ProtectedRoute'; // Fixed case-sensitive import (C7)
+import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './Pages/AuthPage/LoginPage';
 import SignUpPage from './Pages/AuthPage/SignUpPage';
 import FindMentorsPage from './Pages/FindMentorPage/FindMentorsPage';
